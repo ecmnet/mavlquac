@@ -31,7 +31,7 @@
  *
  ****************************************************************************/
 
-package com.comino.mavlquac.vio;
+package com.comino.mavlquac.odometry.estimators.impl;
 
 
 import java.awt.Color;
@@ -49,7 +49,8 @@ import org.mavlink.messages.lquac.msg_vision_position_estimate;
 import com.comino.main.MSPConfig;
 import com.comino.mav.control.IMAVMSPController;
 import com.comino.mavlquac.mjpeg.IVisualStreamHandler;
-import com.comino.mavodometry.detectors.IObstacleDetector;
+import com.comino.mavlquac.odometry.detectors.IObstacleDetector;
+import com.comino.mavlquac.odometry.estimators.IPositionEstimator;
 import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
 import com.comino.mavodometry.librealsense.r200.boofcv.StreamRealSenseVisDepth;
 import com.comino.mavodometry.librealsense.r200.boofcv.StreamRealSenseVisDepth.Listener;
@@ -65,12 +66,10 @@ import com.comino.msp.utils.MSPMathUtils;
 import boofcv.abst.feature.detect.interest.ConfigGeneralDetector;
 import boofcv.abst.feature.tracker.PointTrackerTwoPass;
 import boofcv.abst.sfm.AccessPointTracks3D;
-import boofcv.alg.distort.DoNothingPixelTransform_F32;
 import boofcv.alg.sfm.DepthSparse3D;
 import boofcv.alg.tracker.klt.PkltConfig;
 import boofcv.core.image.ConvertImage;
 import boofcv.factory.feature.tracker.FactoryPointTrackerTwoPass;
-import boofcv.factory.tracker.FactoryTrackerAlg;
 import boofcv.struct.distort.DoNothing2Transform2_F32;
 import boofcv.struct.image.GrayS16;
 import boofcv.struct.image.GrayU16;
@@ -79,7 +78,6 @@ import boofcv.struct.image.Planar;
 import georegression.geometry.ConvertRotation3D_F64;
 import georegression.geometry.GeometryMath_F64;
 import georegression.struct.EulerType;
-import georegression.struct.point.Point3D_F64;
 import georegression.struct.se.Se3_F64;
 
 public class MAVVisualPositionEstimatorVIO implements IPositionEstimator {
