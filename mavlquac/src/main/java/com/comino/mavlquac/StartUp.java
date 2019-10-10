@@ -108,7 +108,7 @@ public class StartUp implements Runnable {
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
 		}
 
-		System.out.println("MSPControlService version "+config.getVersion());
+		System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
 		osBean =  java.lang.management.ManagementFactory.getOperatingSystemMXBean();
 		mxBean = java.lang.management.ManagementFactory.getMemoryMXBean();
