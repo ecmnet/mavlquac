@@ -37,16 +37,16 @@ package com.comino.mavlquac.odometry.detectors.impl;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
 
-import com.comino.main.MSPConfig;
-import com.comino.mav.control.IMAVMSPController;
+import com.comino.mavcom.config.MSPConfig;
+import com.comino.mavcom.control.IMAVMSPController;
+import com.comino.mavcom.mavlink.IMAVLinkListener;
+import com.comino.mavcom.model.DataModel;
+import com.comino.mavcontrol.autopilot.AutoPilotBase;
 import com.comino.mavlquac.mjpeg.IVisualStreamHandler;
 import com.comino.mavlquac.odometry.detectors.IObstacleDetector;
+import com.comino.mavmap.map.map2D.ILocalMap;
+import com.comino.mavmap.utils.MSP3DUtils;
 import com.comino.mavodometry.vio.odometry.MAVDepthVisualOdometry;
-import com.comino.msp.execution.autopilot.AutoPilotBase;
-import com.comino.msp.execution.control.listener.IMAVLinkListener;
-import com.comino.msp.model.DataModel;
-import com.comino.msp.slam.map2D.ILocalMap;
-import com.comino.msp.utils.MSP3DUtils;
 
 import boofcv.struct.image.GrayU16;
 import boofcv.struct.image.GrayU8;

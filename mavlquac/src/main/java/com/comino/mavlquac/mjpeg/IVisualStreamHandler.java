@@ -33,7 +33,7 @@
 
 package com.comino.mavlquac.mjpeg;
 
-import com.comino.msp.model.DataModel;
+import com.comino.mavcom.model.DataModel;
 
 public  interface  IVisualStreamHandler<T> {
 
