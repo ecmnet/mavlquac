@@ -104,7 +104,7 @@ public class StartUp implements Runnable {
 			control = new MAVProxyController(MAVController.MODE_SITL);
 		}
 		else {
-			config  = MSPConfig.getInstance("/home/up","msp.properties");
+			config  = MSPConfig.getInstance("/home/lquac/","msp.properties");
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
 		}
 
