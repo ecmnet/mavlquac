@@ -68,6 +68,9 @@ import com.comino.mavutils.upboard.UpLEDControl;
 import com.comino.mavutils.upboard.WifiQuality;
 import com.sun.net.httpserver.HttpServer;
 
+import boofcv.concurrency.BoofConcurrency;
+import boofcv.struct.image.GrayU8;
+import boofcv.struct.image.Planar;
 import georegression.struct.point.Point3D_F64;
 
 public class StartUp implements Runnable {
@@ -90,6 +93,16 @@ public class StartUp implements Runnable {
 	private MSPLogger logger;
 
 	public StartUp(String[] args) {
+
+		// Wait some seconds before starting up
+
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+
+		BoofConcurrency.setMaxThreads(2);
 
 		ExecutorService.create();
 
@@ -116,6 +129,7 @@ public class StartUp implements Runnable {
 		logger = MSPLogger.getInstance(control);
 
 		commander = new MSPCommander(control,config);
+		commander.getAutopilot().resetMap();
 
 		control.start();
 
@@ -156,7 +170,7 @@ public class StartUp implements Runnable {
 					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
 
 
-				streamer = new HttpMJPEGHandler(info, control.getCurrentModel());
+				streamer = new HttpMJPEGHandler<Planar<GrayU8>>(info, control.getCurrentModel());
 
 
 				//		vision = new MAVVisualPositionEstimatorVO(info, control, config, streamer);
