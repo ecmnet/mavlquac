@@ -72,6 +72,7 @@ import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
 import boofcv.struct.image.Planar;
 import georegression.struct.point.Point3D_F64;
+import javafx.scene.media.MediaPlayer;
 
 public class StartUp implements Runnable {
 
@@ -94,13 +95,6 @@ public class StartUp implements Runnable {
 
 	public StartUp(String[] args) {
 
-		// Wait some seconds before starting up
-
-		try {
-			Thread.sleep(10000);
-		} catch (InterruptedException e1) {
-			e1.printStackTrace();
-		}
 
 		BoofConcurrency.setMaxThreads(2);
 
@@ -117,6 +111,13 @@ public class StartUp implements Runnable {
 			control = new MAVProxyController(MAVController.MODE_SITL);
 		}
 		else {
+
+			try {
+				Thread.sleep(10000);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+
 			config  = MSPConfig.getInstance("/home/lquac/","msp.properties");
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
 		}
