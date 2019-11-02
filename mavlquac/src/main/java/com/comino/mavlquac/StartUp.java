@@ -54,7 +54,6 @@ import com.comino.mavcom.mavlink.IMAVLinkListener;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.status.StatusManager;
-import com.comino.mavcom.utils.DefaultTunes;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavlquac.mjpeg.impl.HttpMJPEGHandler;
 import com.comino.mavlquac.odometry.detectors.impl.FwDirectDepthDetector;
@@ -72,7 +71,6 @@ import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
 import boofcv.struct.image.Planar;
 import georegression.struct.point.Point3D_F64;
-import javafx.scene.media.MediaPlayer;
 
 public class StartUp implements Runnable {
 
@@ -249,7 +247,7 @@ public class StartUp implements Runnable {
 	public void run() {
 		long tms = System.currentTimeMillis();
 		long blink = tms;
-		boolean tune_played = false;
+		boolean shell_commands = false;
 		int pack_count;
 
 		DataModel model = control.getCurrentModel();
@@ -270,7 +268,7 @@ public class StartUp implements Runnable {
 				}
 
 				pack_count = 0; publish_microslam = true;
-				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 10) {
+				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 5) {
 					if(model.grid.toArray(grid.data)) {
 						grid.resolution = 0.05f;
 						grid.extension  = 0;
@@ -280,7 +278,7 @@ public class StartUp implements Runnable {
 						grid.tms = model.grid.tms;
 						grid.count = model.grid.count;
 						control.sendMAVLinkMessage(grid);
-						Thread.sleep(5);
+						Thread.sleep(20);
 					}
 				}
 
@@ -296,9 +294,10 @@ public class StartUp implements Runnable {
 
 				if(!control.isSimulation()) {
 
-					if(!tune_played ) {
-						DefaultTunes.play(control,"MFT200e8a8aE");
-						tune_played = true;
+					if(!shell_commands ) {
+						control.sendShellCommand("pmw3901 start");
+						control.sendShellCommand("tune_control play -m MFT200e8a8aE");
+						shell_commands = true;
 					}
 
 					msg_timesync sync_s = new msg_timesync(255,1);
