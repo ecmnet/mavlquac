@@ -111,7 +111,7 @@ public class StartUp implements Runnable {
 		else {
 
 			try {
-				Thread.sleep(10000);
+				Thread.sleep(5000);
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}
@@ -296,7 +296,7 @@ public class StartUp implements Runnable {
 
 					if(!shell_commands ) {
 						control.sendShellCommand("pmw3901 start");
-						control.sendShellCommand("tune_control play -m MFT200e8a8aE");
+						//control.sendShellCommand("tune_control play -m MFT200e8a8aE");
 						shell_commands = true;
 					}
 
