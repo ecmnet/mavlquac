@@ -5,6 +5,13 @@
 	<property name="deploy.dir" value="/Volumes/lquac" />
 
 
+	<target name="mvn">
+	    <exec dir="." executable="sh">
+	        <arg line="-c '/usr/local/Cellar/maven/3.6.2/bin/mvn clean install'" />
+	    </exec>
+	</target>
+
+
 	<target name="UPDEPLOY" description="Deploy to UPBoard">
 		<tstamp>
 		    <format property="current.time" pattern="dd.MM.yyyy" />
