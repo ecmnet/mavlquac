@@ -83,6 +83,8 @@ public class StartUp implements Runnable {
 	private HttpMJPEGHandler<?> streamer = null;
 
 	private MSPCommander  commander = null;
+	private DataModel     model     = null;
+
 	private final long startTime_ms = System.currentTimeMillis();
 
 	IPositionEstimator vision = null;
@@ -131,6 +133,7 @@ public class StartUp implements Runnable {
 		commander.getAutopilot().resetMap();
 
 		control.start();
+		model = control.getCurrentModel();
 
 
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_SERVICES,
@@ -144,6 +147,11 @@ public class StartUp implements Runnable {
 				if(vision!=null)
 					vision.stop();
 			}
+		});
+
+		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_GCL_CONNECTED, StatusManager.EDGE_FALLING, (n)-> {
+			System.out.println("Connection to GCL lost..");
+
 		});
 
 
@@ -268,7 +276,8 @@ public class StartUp implements Runnable {
 				}
 
 				pack_count = 0; publish_microslam = true;
-				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 5) {
+
+				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 5 && model.sys.isStatus(Status.MSP_GCL_CONNECTED)) {
 					if(model.grid.toArray(grid.data)) {
 						grid.resolution = 0.05f;
 						grid.extension  = 0;
