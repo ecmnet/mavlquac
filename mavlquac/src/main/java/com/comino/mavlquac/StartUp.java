@@ -277,7 +277,7 @@ public class StartUp implements Runnable {
 
 				pack_count = 0; publish_microslam = true;
 
-				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 5 && model.sys.isStatus(Status.MSP_GCL_CONNECTED)) {
+				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 5) {
 					if(model.grid.toArray(grid.data)) {
 						grid.resolution = 0.05f;
 						grid.extension  = 0;
