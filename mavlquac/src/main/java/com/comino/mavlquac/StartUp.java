@@ -113,7 +113,7 @@ public class StartUp implements Runnable {
 		else {
 
 			try {
-				Thread.sleep(5000);
+				Thread.sleep(8000);
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}

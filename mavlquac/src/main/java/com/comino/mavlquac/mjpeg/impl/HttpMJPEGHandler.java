@@ -45,6 +45,7 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 import com.comino.mavcom.model.DataModel;
+import com.comino.mavcom.model.segment.Status;
 import com.comino.mavlquac.mjpeg.IMJPEGOverlayListener;
 import com.comino.mavlquac.mjpeg.IVisualStreamHandler;
 import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
@@ -86,7 +87,6 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 		he.sendResponseHeaders(200, 0);
 		OutputStream os = new BufferedOutputStream(he.getResponseBody());
 		while(true) {
-			os.write(("--BoundaryString\r\nContent-type:image/jpeg content-length:1\r\n\r\n").getBytes());
 
 			try {
 
@@ -95,6 +95,8 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 					if(input_image==null)
 						wait();
 				}
+
+				os.write(("--BoundaryString\r\nContent-type:image/jpeg content-length:1\r\n\r\n").getBytes());
 
 				if(input_image instanceof Planar) {
 					ConvertBufferedImage.convertTo_U8((Planar<GrayU8>)input_image, image, true);
@@ -126,7 +128,7 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 	@Override
 	public  void addToStream(T input, DataModel model, long tms_us) {
 
-		if((System.currentTimeMillis()-last_image_tms)<MAX_VIDEO_RATE_MS)
+		if((System.currentTimeMillis()-last_image_tms)<MAX_VIDEO_RATE_MS || !model.sys.isStatus(Status.MSP_GCL_CONNECTED))
 			return;
 
 		last_image_tms = System.currentTimeMillis();
