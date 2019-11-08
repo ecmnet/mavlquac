@@ -304,7 +304,7 @@ public class StartUp implements Runnable {
 				if(!control.isSimulation()) {
 
 					if(!shell_commands ) {
-						control.sendShellCommand("pmw3901 start");
+						control.sendShellCommand("rm3100 start");
 						//control.sendShellCommand("tune_control play -m MFT200e8a8aE");
 						shell_commands = true;
 					}
