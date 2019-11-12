@@ -32,11 +32,11 @@
  ****************************************************************************/
 
 
-package com.comino.mavlquac.mjpeg;
+package com.comino.mavlquac.video;
 
 import java.awt.Graphics;
 
-public interface IMJPEGOverlayListener {
+public interface IOverlayListener {
 
 	public void processOverlay(Graphics ctx);
 

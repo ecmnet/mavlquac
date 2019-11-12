@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 
-package com.comino.mavlquac.mjpeg.impl;
+package com.comino.mavlquac.video.impl;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -46,10 +46,9 @@ import javax.imageio.ImageIO;
 
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
-import com.comino.mavlquac.mjpeg.IMJPEGOverlayListener;
-import com.comino.mavlquac.mjpeg.IVisualStreamHandler;
+import com.comino.mavlquac.video.IOverlayListener;
+import com.comino.mavlquac.video.IVisualStreamHandler;
 import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
-
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -61,7 +60,7 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 
 	private static final int MAX_VIDEO_RATE_MS = 40;
 
-	private List<IMJPEGOverlayListener> listeners = null;
+	private List<IOverlayListener> listeners = null;
 	private BufferedImage image = null;
 	private DataModel model = null;
 	private Graphics2D ctx;
@@ -72,11 +71,11 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 
 	public HttpMJPEGHandler(RealSenseInfo info, DataModel model) {
 		this.model = model;
-		this.listeners = new ArrayList<IMJPEGOverlayListener>();
+		this.listeners = new ArrayList<IOverlayListener>();
 		this.image = new BufferedImage(info.width, info.height, BufferedImage.TYPE_3BYTE_BGR);
 		this.ctx = image.createGraphics();
 
-		ImageIO.setUseCache(false);
+		ImageIO.setUseCache(true);
 
 	}
 
@@ -91,10 +90,10 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 			try {
 
 				synchronized(this) {
-
 					if(input_image==null)
 						wait();
 				}
+
 
 				os.write(("--BoundaryString\r\nContent-type:image/jpeg content-length:1\r\n\r\n").getBytes());
 
@@ -105,7 +104,7 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 					ConvertBufferedImage.convertTo((GrayU8)input_image, image, true);
 
 				if(listeners.size()>0) {
-					for(IMJPEGOverlayListener listener : listeners)
+					for(IOverlayListener listener : listeners)
 						listener.processOverlay(ctx);
 				}
 
@@ -121,7 +120,7 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 	}
 
 	@Override
-	public void registerOverlayListener(IMJPEGOverlayListener listener) {
+	public void registerOverlayListener(IOverlayListener listener) {
 		this.listeners.add(listener);
 	}
 

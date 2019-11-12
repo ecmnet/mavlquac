@@ -31,7 +31,7 @@
  *
  ****************************************************************************/
 
-package com.comino.mavlquac.mjpeg;
+package com.comino.mavlquac.video;
 
 import com.comino.mavcom.model.DataModel;
 
@@ -41,6 +41,6 @@ public  interface  IVisualStreamHandler<T> {
 	public final static int FILE = 1;
 
 	public void addToStream(T image, DataModel model, long tms_us);
-	public void registerOverlayListener(IMJPEGOverlayListener listener);
+	public void registerOverlayListener(IOverlayListener listener);
 
 }
