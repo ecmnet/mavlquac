@@ -187,7 +187,7 @@ public class StartUp implements Runnable {
 				try {
 					server = HttpServer.create(new InetSocketAddress(8080),2);
 					server.createContext("/mjpeg", streamer);
-					server.setExecutor(null); // creates a default executor
+					server.setExecutor(ExecutorService.get()); // creates a default executor
 					server.start();
 				} catch (IOException e) {
 					System.err.println(e.getMessage());
@@ -198,7 +198,7 @@ public class StartUp implements Runnable {
 
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_GCL_CONNECTED, StatusManager.EDGE_FALLING, (n)-> {
 			System.out.println("Connection to GCL lost..");
-			streamer.stop();
+		//	streamer.stop();
 
 		});
 
