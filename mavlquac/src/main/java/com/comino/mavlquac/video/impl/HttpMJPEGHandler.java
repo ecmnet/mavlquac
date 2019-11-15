@@ -118,8 +118,9 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 
 				input_image = null;
 
-			} catch (Exception e) { }
+			} catch (Exception e) { is_running = false; }
 		}
+        he.close();
 	}
 
 	@Override
