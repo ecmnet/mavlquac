@@ -58,7 +58,7 @@ import boofcv.struct.image.Planar;
 
 public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>  {
 
-	private static final int MAX_VIDEO_RATE_MS = 40;
+	private static final int MAX_VIDEO_RATE_MS = 50;
 
 	private List<IOverlayListener> listeners = null;
 	private BufferedImage image = null;
@@ -66,6 +66,7 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 	private Graphics2D ctx;
 
 	private T input_image;
+	private boolean is_running = false;
 
 	private long last_image_tms = 0;
 
@@ -75,25 +76,29 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 		this.image = new BufferedImage(info.width, info.height, BufferedImage.TYPE_3BYTE_BGR);
 		this.ctx = image.createGraphics();
 
-		ImageIO.setUseCache(true);
+		ImageIO.setUseCache(false);
 
+	}
+
+	public void stop() {
+		is_running = false;
 	}
 
 	@Override @SuppressWarnings("unchecked")
 	public void handle(HttpExchange he) throws IOException {
-
+        is_running = true;
 		he.getResponseHeaders().add("content-type","multipart/x-mixed-replace; boundary=--BoundaryString");
 		he.sendResponseHeaders(200, 0);
 		OutputStream os = new BufferedOutputStream(he.getResponseBody());
-		while(true) {
+
+		while(is_running) {
 
 			try {
 
 				synchronized(this) {
-					if(input_image==null)
+				  if(input_image==null)
 						wait();
 				}
-
 
 				os.write(("--BoundaryString\r\nContent-type:image/jpeg content-length:1\r\n\r\n").getBytes());
 
@@ -111,8 +116,6 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 				ImageIO.write(image, "jpg", os );
 				os.write("\r\n\r\n".getBytes());
 
-
-
 				input_image = null;
 
 			} catch (Exception e) { }
@@ -129,7 +132,6 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 
 		if((System.currentTimeMillis()-last_image_tms)<MAX_VIDEO_RATE_MS || !model.sys.isStatus(Status.MSP_GCL_CONNECTED))
 			return;
-
 		last_image_tms = System.currentTimeMillis();
 
 		synchronized(this) {

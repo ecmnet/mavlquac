@@ -55,10 +55,10 @@ import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
-import com.comino.mavlquac.mjpeg.impl.HttpMJPEGHandler;
 import com.comino.mavlquac.odometry.detectors.impl.FwDirectDepthDetector;
 import com.comino.mavlquac.odometry.estimators.IPositionEstimator;
 import com.comino.mavlquac.odometry.estimators.impl.MAVVisualPositionEstimatorVIO;
+import com.comino.mavlquac.video.impl.HttpMJPEGHandler;
 import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.linux.LinuxUtils;
@@ -149,11 +149,6 @@ public class StartUp implements Runnable {
 			}
 		});
 
-		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_GCL_CONNECTED, StatusManager.EDGE_FALLING, (n)-> {
-			System.out.println("Connection to GCL lost..");
-
-		});
-
 
 
 		logger.writeLocalMsg("MAVProxy "+config.getVersion()+" loaded");
@@ -163,6 +158,7 @@ public class StartUp implements Runnable {
 		worker.setName("Main");
 		worker.start();
 		//	}
+
 
 		// Start services if required
 
@@ -199,6 +195,12 @@ public class StartUp implements Runnable {
 
 			}
 		} catch(Exception e) { System.out.println("No vision available: "+e.getMessage()); }
+
+		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_GCL_CONNECTED, StatusManager.EDGE_FALLING, (n)-> {
+			System.out.println("Connection to GCL lost..");
+			streamer.stop();
+
+		});
 
 
 		this.publish_microslam = config.getBoolProperty("slam_publish_microslam", "true");
