@@ -53,11 +53,13 @@ import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.mavlink.IMAVLinkListener;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
+import com.comino.mavcom.param.PX4ParamReader;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavlquac.odometry.detectors.impl.FwDirectDepthDetector;
 import com.comino.mavlquac.odometry.estimators.IPositionEstimator;
 import com.comino.mavlquac.odometry.estimators.impl.MAVVisualPositionEstimatorVIO;
+import com.comino.mavlquac.odometry.pose.StreamRealSensePose;
 import com.comino.mavlquac.video.impl.HttpMJPEGHandler;
 import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
 import com.comino.mavutils.legacy.ExecutorService;
@@ -80,18 +82,21 @@ public class StartUp implements Runnable {
 	private OperatingSystemMXBean osBean = null;
 	private MemoryMXBean mxBean = null;
 
-	private HttpMJPEGHandler<?> streamer = null;
+	private HttpMJPEGHandler<GrayU8> streamer = null;
 
 	private MSPCommander  commander = null;
 	private DataModel     model     = null;
 
 	private final long startTime_ms = System.currentTimeMillis();
 
-	IPositionEstimator vision = null;
+	private IPositionEstimator vision = null;
+	private StreamRealSensePose pose = null;
+
 	private boolean publish_microslam;
 	private boolean is_simulation;
 
 	private MSPLogger logger;
+	private PX4ParamReader params;
 
 	public StartUp(String[] args) {
 
@@ -109,8 +114,13 @@ public class StartUp implements Runnable {
 		if(is_simulation) {
 			config  = MSPConfig.getInstance(System.getProperty("user.home")+"/","msp.properties");
 			control = new MAVProxyController(MAVController.MODE_SITL);
+			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion());
 		}
 		else {
+
+			config  = MSPConfig.getInstance("/home/lquac/","msp.properties");
+			control = new MAVProxyController(MAVController.MODE_NORMAL);
+			System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
 			try {
 				Thread.sleep(8000);
@@ -118,11 +128,7 @@ public class StartUp implements Runnable {
 				e1.printStackTrace();
 			}
 
-			config  = MSPConfig.getInstance("/home/lquac/","msp.properties");
-			control = new MAVProxyController(MAVController.MODE_NORMAL);
 		}
-
-		System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
 		osBean =  java.lang.management.ManagementFactory.getOperatingSystemMXBean();
 		mxBean = java.lang.management.ManagementFactory.getMemoryMXBean();
@@ -134,6 +140,13 @@ public class StartUp implements Runnable {
 
 		control.start();
 		model = control.getCurrentModel();
+
+		params = new PX4ParamReader(control);
+
+		control.getStatusManager().addListener(Status.MSP_CONNECTED, (n) -> {
+	      if(n.isStatus(Status.MSP_CONNECTED))
+	    	  params.requestRefresh();
+		});
 
 
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_SERVICES,
@@ -172,14 +185,24 @@ public class StartUp implements Runnable {
 				else
 					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
 
+				streamer = new HttpMJPEGHandler<GrayU8>(info, control.getCurrentModel());
 
-				streamer = new HttpMJPEGHandler<Planar<GrayU8>>(info, control.getCurrentModel());
+
+				//	vision = new MAVVisualPositionEstimatorVO(info, control, config, streamer);
+		//		vision = new MAVVisualPositionEstimatorVIO(info, control, config, streamer);
+
+		//		vision.registerDetector(new FwDirectDepthDetector(control,config,streamer));
+
+		//		pose = new StreamRealSensePose(control, StreamRealSensePose.GROUNDTRUTH_MODE, streamer);
 
 
-				//		vision = new MAVVisualPositionEstimatorVO(info, control, config, streamer);
-				vision = new MAVVisualPositionEstimatorVIO(info, control, config, streamer);
 
-				vision.registerDetector(new FwDirectDepthDetector(control,config,streamer));
+				info = new RealSenseInfo();
+				info.height=240;
+				info.width=320;
+				pose = new StreamRealSensePose(control, StreamRealSensePose.LPOS_MODE, streamer);
+
+				pose.start();
 
 
 
@@ -306,15 +329,10 @@ public class StartUp implements Runnable {
 				if(!control.isSimulation()) {
 
 					if(!shell_commands ) {
-						control.sendShellCommand("rm3100 start");
+					    //control.sendShellCommand("rm3100 start");
 						//control.sendShellCommand("tune_control play -m MFT200e8a8aE");
 						shell_commands = true;
 					}
-
-					msg_timesync sync_s = new msg_timesync(255,1);
-					sync_s.tc1 = 0;
-					sync_s.ts1 = System.currentTimeMillis()*1000000L;
-					control.sendMAVLinkMessage(sync_s);
 
 					wifi.getQuality();
 					temp.getTemperature();
@@ -338,6 +356,11 @@ public class StartUp implements Runnable {
 					continue;
 
 				blink = System.currentTimeMillis();
+
+				msg_timesync sync_s = new msg_timesync(255,1);
+				sync_s.tc1 = 0;
+				sync_s.ts1 = System.currentTimeMillis()*1000000L;
+				control.sendMAVLinkMessage(sync_s);
 
 				if(model.sys.isStatus(Status.MSP_ACTIVE))
 					UpLEDControl.flash("green", 10);

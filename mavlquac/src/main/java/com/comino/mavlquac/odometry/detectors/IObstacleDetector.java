@@ -33,7 +33,7 @@
 
 package com.comino.mavlquac.odometry.detectors;
 
-import com.comino.mavodometry.vio.odometry.MAVDepthVisualOdometry;
+import com.comino.mavodometry.librealsense.r200.vio.odometry.MAVDepthVisualOdometry;
 
 import boofcv.struct.image.GrayU16;
 import boofcv.struct.image.GrayU8;

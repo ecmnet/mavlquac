@@ -53,14 +53,14 @@ import com.comino.mavcom.mavlink.IMAVLinkListener;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.status.StatusManager;
-import com.comino.mavlquac.mjpeg.IVisualStreamHandler;
 import com.comino.mavlquac.odometry.detectors.IObstacleDetector;
 import com.comino.mavlquac.odometry.estimators.IPositionEstimator;
+import com.comino.mavlquac.video.IVisualStreamHandler;
 import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
 import com.comino.mavodometry.librealsense.r200.boofcv.StreamRealSenseVisDepth;
 import com.comino.mavodometry.librealsense.r200.boofcv.StreamRealSenseVisDepth.Listener;
-import com.comino.mavodometry.vio.FactoryMAVOdometryVIO;
-import com.comino.mavodometry.vio.odometry.MAVDepthVisualOdometry;
+import com.comino.mavodometry.librealsense.r200.vio.FactoryMAVOdometryVIO;
+import com.comino.mavodometry.librealsense.r200.vio.odometry.MAVDepthVisualOdometry;
 import com.comino.mavutils.MSPMathUtils;
 
 import boofcv.abst.feature.detect.interest.ConfigGeneralDetector;
@@ -163,18 +163,18 @@ public class MAVVisualPositionEstimatorVIO implements IPositionEstimator {
 
 	private IMAVMSPController 							    control		= null;
 	private List<IObstacleDetector> 						detectors 	= null;
-	private List<IVisualStreamHandler<Planar<GrayU8>>>	    streams 	= null;
+	private List<IVisualStreamHandler<GrayU8>>	            streams 	= null;
 
 
 	private final Color	bgColor = new Color(128,128,128,130);
 
 
-	public <T> MAVVisualPositionEstimatorVIO(RealSenseInfo info, IMAVMSPController control, MSPConfig config, IVisualStreamHandler<T> stream) {
+	public <T> MAVVisualPositionEstimatorVIO(RealSenseInfo info, IMAVMSPController control, MSPConfig config, IVisualStreamHandler<GrayU8> stream) {
 
 		this.info    = info;
 		this.control = control;
 		this.detectors = new ArrayList<IObstacleDetector>();
-		this.streams   = new ArrayList<IVisualStreamHandler<Planar<GrayU8>>>();
+		this.streams   = new ArrayList<IVisualStreamHandler<GrayU8>>();
 
 		System.out.println("Vision position estimator: "+this.getClass().getSimpleName());
 		this.debug = config.getBoolProperty("vision_debug", "true");
@@ -193,6 +193,8 @@ public class MAVVisualPositionEstimatorVIO implements IPositionEstimator {
 
 		this.do_odometry = config.getBoolProperty("vision_enable", "true");
 		System.out.println("Vision Odometry enabled: "+do_odometry);
+
+//		this.do_odometry = false;
 
 		this.do_xy_position = config.getBoolProperty("vision_pub_pos_xy", "true");
 		System.out.println("Vision publishes XY position: "+do_xy_position);
@@ -317,6 +319,8 @@ public class MAVVisualPositionEstimatorVIO implements IPositionEstimator {
 
 				publish_tms_us = System.currentTimeMillis()*1000;
 
+				publisMSPVision();
+
 
 				if(!do_odometry || visualOdometry == null ) {
 					return;
@@ -338,8 +342,8 @@ public class MAVVisualPositionEstimatorVIO implements IPositionEstimator {
 
 					ConvertImage.average(rgb, gray);
 
-					for(IVisualStreamHandler<Planar<GrayU8>> stream : streams)
-						stream.addToStream(rgb, model, System.currentTimeMillis()*1000);
+					for(IVisualStreamHandler<GrayU8> stream : streams)
+						stream.addToStream(gray, model, System.currentTimeMillis()*1000);
 
 
 					if(control.isSimulation()) {
@@ -458,7 +462,6 @@ public class MAVVisualPositionEstimatorVIO implements IPositionEstimator {
 				updateInternalModel();
 
 				// Publish MSP data
-				publisMSPVision();
 
 
 			}
@@ -468,6 +471,7 @@ public class MAVVisualPositionEstimatorVIO implements IPositionEstimator {
 	private void overlayFeatures(Graphics ctx) {
 
 		AccessPointTracks3D points = (AccessPointTracks3D)visualOdometry;
+
 		for( int i = 0; i < points.getAllTracks().size(); i++ ) {
 			if(points.isInlier(i))
 				ctx.drawRect((int)points.getAllTracks().get(i).x,(int)points.getAllTracks().get(i).y, 1, 1);
@@ -644,6 +648,10 @@ public class MAVVisualPositionEstimatorVIO implements IPositionEstimator {
 			msg.h = MSPMathUtils.fromRad((float)visAttitude[2]);   //MSPMathUtils.fromRad((float)vis_init.getY());
 			msg.p = (float)visAttitude[1];
 			msg.r = (float)visAttitude[0];
+
+			msg.gx = model.vision.gx;
+			msg.gy = model.vision.gy;
+			msg.gz = model.vision.gz;
 
 			msg.quality = quality;
 			msg.fps = fps;

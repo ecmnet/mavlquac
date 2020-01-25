@@ -131,9 +131,10 @@ public class HttpMJPEGHandler<T> implements HttpHandler, IVisualStreamHandler<T>
 	@Override
 	public  void addToStream(T input, DataModel model, long tms_us) {
 
-		if((System.currentTimeMillis()-last_image_tms)<MAX_VIDEO_RATE_MS || !model.sys.isStatus(Status.MSP_GCL_CONNECTED))
+		if((System.currentTimeMillis()-last_image_tms)<MAX_VIDEO_RATE_MS )//|| !model.sys.isStatus(Status.MSP_GCL_CONNECTED))
 			return;
 		last_image_tms = System.currentTimeMillis();
+
 
 		synchronized(this) {
 			input_image = input;

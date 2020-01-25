@@ -42,11 +42,11 @@ import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.mavlink.IMAVLinkListener;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcontrol.autopilot.AutoPilotBase;
-import com.comino.mavlquac.mjpeg.IVisualStreamHandler;
 import com.comino.mavlquac.odometry.detectors.IObstacleDetector;
+import com.comino.mavlquac.video.IVisualStreamHandler;
 import com.comino.mavmap.map.map2D.ILocalMap;
 import com.comino.mavmap.utils.MSP3DUtils;
-import com.comino.mavodometry.vio.odometry.MAVDepthVisualOdometry;
+import com.comino.mavodometry.librealsense.r200.vio.odometry.MAVDepthVisualOdometry;
 
 import boofcv.struct.image.GrayU16;
 import boofcv.struct.image.GrayU8;
