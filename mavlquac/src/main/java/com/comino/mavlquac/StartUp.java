@@ -54,8 +54,8 @@ import com.comino.mavcom.param.PX4ParamReader;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavmap.mapper.impl.FwDirectDepthDetector;
-import com.comino.mavodometry.estimators.IPositionEstimator;
-import com.comino.mavodometry.estimators.impl.MAVT265PositionEstimator;
+import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
+import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
 import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
 import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
 import com.comino.mavutils.legacy.ExecutorService;
@@ -83,7 +83,7 @@ public class StartUp implements Runnable {
 
 	private final long startTime_ms = System.currentTimeMillis();
 
-	private IPositionEstimator vision = null;
+	private MAVR200PositionEstimator vision = null;
 	private MAVT265PositionEstimator pose = null;
 
 	private boolean publish_microslam;
