@@ -39,8 +39,6 @@ import java.lang.management.OperatingSystemMXBean;
 import java.net.InetSocketAddress;
 
 import org.mavlink.messages.MAV_SEVERITY;
-import org.mavlink.messages.MSP_CMD;
-import org.mavlink.messages.lquac.msg_msp_command;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_status;
 import org.mavlink.messages.lquac.msg_timesync;
@@ -50,18 +48,16 @@ import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.control.impl.MAVController;
 import com.comino.mavcom.control.impl.MAVProxyController;
 import com.comino.mavcom.log.MSPLogger;
-import com.comino.mavcom.mavlink.IMAVLinkListener;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4ParamReader;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
-import com.comino.mavlquac.odometry.detectors.impl.FwDirectDepthDetector;
-import com.comino.mavlquac.odometry.estimators.IPositionEstimator;
-import com.comino.mavlquac.odometry.estimators.impl.MAVVisualPositionEstimatorVIO;
-import com.comino.mavlquac.odometry.pose.StreamRealSensePose;
-import com.comino.mavlquac.video.impl.HttpMJPEGHandler;
+import com.comino.mavmap.mapper.impl.FwDirectDepthDetector;
+import com.comino.mavodometry.estimators.IPositionEstimator;
+import com.comino.mavodometry.estimators.impl.MAVT265PositionEstimator;
 import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
+import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.linux.LinuxUtils;
 import com.comino.mavutils.upboard.CPUTemperature;
@@ -71,8 +67,6 @@ import com.sun.net.httpserver.HttpServer;
 
 import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
-import boofcv.struct.image.Planar;
-import georegression.struct.point.Point3D_F64;
 
 public class StartUp implements Runnable {
 
@@ -90,7 +84,7 @@ public class StartUp implements Runnable {
 	private final long startTime_ms = System.currentTimeMillis();
 
 	private IPositionEstimator vision = null;
-	private StreamRealSensePose pose = null;
+	private MAVT265PositionEstimator pose = null;
 
 	private boolean publish_microslam;
 	private boolean is_simulation;
@@ -136,7 +130,7 @@ public class StartUp implements Runnable {
 		logger = MSPLogger.getInstance(control);
 
 		commander = new MSPCommander(control,config);
-		commander.getAutopilot().resetMap();
+	//	commander.getAutopilot().resetMap();
 
 		control.start();
 		model = control.getCurrentModel();
@@ -185,25 +179,28 @@ public class StartUp implements Runnable {
 				else
 					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
 
-				streamer = new HttpMJPEGHandler<GrayU8>(info, control.getCurrentModel());
+//*** Depth Odometry, Mapping, Groundtruth via T265
 
 
 				//	vision = new MAVVisualPositionEstimatorVO(info, control, config, streamer);
-		//		vision = new MAVVisualPositionEstimatorVIO(info, control, config, streamer);
+//				vision = new MAVVisualPositionEstimatorVIO(info, control, config, streamer);
+//				vision.registerDetector(new FwDirectDepthDetector(control,config,commander.getMap(),streamer));
+//				pose = new StreamRealSensePose(control, StreamRealSensePose.GROUNDTRUTH_MODE, streamer);
 
-		//		vision.registerDetector(new FwDirectDepthDetector(control,config,streamer));
+//				if(vision!=null && !vision.isRunning()) {
+//					vision.start();
+//				    pose.start();
+//				}
 
-		//		pose = new StreamRealSensePose(control, StreamRealSensePose.GROUNDTRUTH_MODE, streamer);
 
+//*** T265 odometry, no Mapping
 
-
-				info = new RealSenseInfo();
-				info.height=240;
-				info.width=320;
-				pose = new StreamRealSensePose(control, StreamRealSensePose.LPOS_MODE, streamer);
+				streamer = new HttpMJPEGHandler<GrayU8>(320,240, control.getCurrentModel());
+				pose = new MAVT265PositionEstimator(control, config, 320,240, MAVT265PositionEstimator.LPOS_MODE_NED, streamer);
 
 				pose.start();
 
+//***********
 
 
 				HttpServer server;
@@ -217,7 +214,7 @@ public class StartUp implements Runnable {
 				}
 
 			}
-		} catch(Exception e) { System.out.println("No vision available: "+e.getMessage()); }
+		} catch(Exception e) { System.out.println("! No vision available"); }
 
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_GCL_CONNECTED, StatusManager.EDGE_FALLING, (n)-> {
 			System.out.println("Connection to GCL lost..");
@@ -229,41 +226,6 @@ public class StartUp implements Runnable {
 		this.publish_microslam = config.getBoolProperty("slam_publish_microslam", "true");
 		System.out.println("[vis] Publishing microSlam enabled: "+publish_microslam);
 
-		if(vision!=null && !vision.isRunning()) {
-			vision.start();
-		}
-
-		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
-			@Override
-			public void received(Object o) {
-				Point3D_F64 target = null;
-				msg_msp_command cmd = (msg_msp_command)o;
-				switch(cmd.command) {
-				case MSP_CMD.SET_OPTICAL_TARGET:
-					if(vision.getOdometry() == null || !vision.isRunning()) {
-						return;
-					}
-					try {
-						if(Float.isNaN(cmd.param1) || Float.isNaN(cmd.param2))
-							target = vision.getOdometry().getPoint3DFromPixel(160, 120);
-						else
-							target = vision.getOdometry().getPoint3DFromPixel((int)cmd.param1, (int)cmd.param2);
-
-                        if(target!=null && target.z < 15.0f)
-						   logger.writeLocalMsg(String.format("OpticalTarget: [%.2f %.2f %.2f]", target.x,target.z,target.y));
-                        else
-                        	logger.writeLocalMsg("OpticalTarget could not be set)");
-
-					} catch(Exception e) {
-						e.printStackTrace();
-					}
-					// TODO: Rotate into body_ned and transform to world (add LPOS)
-					//  commander.getAutopilot().moveto((float)target.x, (float)target.y, (float)target.z - 0.25f, Float.NaN);
-					break;
-				}
-			}
-		});
-
 	}
 
 	public static void main(String[] args)  {
@@ -274,7 +236,6 @@ public class StartUp implements Runnable {
 		new StartUp(args);
 
 	}
-
 
 	@Override
 	public void run() {

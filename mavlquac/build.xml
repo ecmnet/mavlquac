@@ -7,7 +7,7 @@
 
 	<target name="mvn">
 	    <exec dir="." executable="sh">
-	        <arg line="-c '/usr/local/Cellar/maven/3.6.2/bin/mvn clean install'" />
+	        <arg line="-c '/usr/local/Cellar/maven/3.6.3/bin/mvn clean install'" />
 	    </exec>
 	</target>
 
