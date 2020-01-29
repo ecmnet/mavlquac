@@ -153,6 +153,8 @@ public class StartUp implements Runnable {
 			public void run() {
 				if(vision!=null)
 					vision.stop();
+				if(pose!=null)
+					pose.stop();
 			}
 		});
 
@@ -179,6 +181,8 @@ public class StartUp implements Runnable {
 				else
 					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
 
+				streamer = new HttpMJPEGHandler<GrayU8>(320,240, control.getCurrentModel());
+
 //*** Depth Odometry, Mapping, Groundtruth via T265
 
 
@@ -195,7 +199,6 @@ public class StartUp implements Runnable {
 
 //*** T265 odometry, no Mapping
 
-				streamer = new HttpMJPEGHandler<GrayU8>(320,240, control.getCurrentModel());
 				pose = new MAVT265PositionEstimator(control, config, 320,240, MAVT265PositionEstimator.LPOS_MODE_NED, streamer);
 
 				pose.start();
