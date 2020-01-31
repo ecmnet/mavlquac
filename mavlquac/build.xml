@@ -2,12 +2,13 @@
 
 	<property name="lib.dir" value="lib" />
 	<property name="dis.dir" value="target" />
+	<property name="props.dir" value="properties" />
 	<property name="deploy.dir" value="/Volumes/lquac" />
 
 
 	<target name="mvn">
 	    <exec dir="." executable="sh">
-	        <arg line="-c '/usr/local/Cellar/maven/3.6.3/bin/mvn clean install'" />
+	        <arg line="-c '/usr/local/Cellar/maven/3.6.3/bin/mvn clean install -amd'" />
 	    </exec>
 	</target>
 
@@ -17,6 +18,7 @@
 		    <format property="current.time" pattern="dd.MM.yyyy" />
 		  </tstamp>
 		<copy file="${dis.dir}/mavlquac-0.0.1-jar-with-dependencies.jar" todir="${deploy.dir}"/>
+		<copy file="${props.dir}/msp.properties" todir="${deploy.dir}"/>
 		<!--
 		<copy todir="${deploy.dir}">
 			<fileset dir="${dis.dir}/mavlquac*-dependencies.jar" />
