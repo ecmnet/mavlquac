@@ -54,6 +54,7 @@ import com.comino.mavcom.param.PX4ParamReader;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavmap.mapper.impl.FwDirectDepthDetector;
+import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
 import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
@@ -67,6 +68,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
+import boofcv.struct.image.Planar;
 
 public class StartUp implements Runnable {
 
@@ -76,7 +78,7 @@ public class StartUp implements Runnable {
 	private OperatingSystemMXBean osBean = null;
 	private MemoryMXBean mxBean = null;
 
-	private HttpMJPEGHandler<GrayU8> streamer = null;
+	private HttpMJPEGHandler<Planar<GrayU8>> streamer = null;
 
 	private MSPCommander  commander = null;
 	private DataModel     model     = null;
@@ -85,6 +87,7 @@ public class StartUp implements Runnable {
 
 	private MAVR200PositionEstimator vision = null;
 	private MAVT265PositionEstimator pose = null;
+	private MAVR200DepthEstimator depth = null;
 
 	private boolean publish_microslam;
 	private boolean is_simulation;
@@ -155,6 +158,8 @@ public class StartUp implements Runnable {
 					vision.stop();
 				if(pose!=null)
 					pose.stop();
+				if(depth!=null)
+					depth.stop();
 			}
 		});
 
@@ -171,19 +176,18 @@ public class StartUp implements Runnable {
 
 		// Start services if required
 
-		try {
-			Thread.sleep(200);
+		try {	Thread.sleep(200); } catch(Exception e) { }
 
 			if(config.getBoolProperty("vision_enabled", "true")) {
 
-				if(config.getBoolProperty("vision_highres", "false"))
-					info = new RealSenseInfo(640,480, RealSenseInfo.MODE_RGB);
-				else
-					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
+//				if(config.getBoolProperty("vision_highres", "false"))
+//					info = new RealSenseInfo(640,480, RealSenseInfo.MODE_RGB);
+//				else
+//					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
 
-				streamer = new HttpMJPEGHandler<GrayU8>(320,240, control.getCurrentModel());
+				streamer = new HttpMJPEGHandler<Planar<GrayU8>>(320,240, control.getCurrentModel());
 
-//*** Depth Odometry, Mapping, Groundtruth via T265
+//*** R200 Odometry, Mapping, Groundtruth via T265
 
 
 				//	vision = new MAVVisualPositionEstimatorVO(info, control, config, streamer);
@@ -196,28 +200,44 @@ public class StartUp implements Runnable {
 //				    pose.start();
 //				}
 
+//*** R200 Depth estimation
 
-//*** T265 odometry, no Mapping
+				try {
 
-				pose = new MAVT265PositionEstimator(control, config, 320,240, MAVT265PositionEstimator.LPOS_MODE_NED, streamer);
+				depth = new MAVR200DepthEstimator(control, config, 320,240, commander.getMap(), streamer);
+				depth.start();
 
+				} catch(Exception e) {
+					System.out.println("! No depth estimation available");
+					//e.printStackTrace();
+				}
+
+
+//*** T265 odometry
+
+				try {
+
+				pose = new MAVT265PositionEstimator(control, config, 320,240, MAVT265PositionEstimator.LPOS_MODE_NED);
 				pose.start();
+
+				} catch(Exception e) { System.out.println("! No pose estimation available"); }
 
 //***********
 
+				try {
+
 
 				HttpServer server;
-				try {
+
 					server = HttpServer.create(new InetSocketAddress(8080),2);
 					server.createContext("/mjpeg", streamer);
 					server.setExecutor(ExecutorService.get()); // creates a default executor
 					server.start();
-				} catch (IOException e) {
-					System.err.println(e.getMessage());
-				}
+
+				} catch(Exception e) { System.out.println("! No vision stream available"); }
+
 
 			}
-		} catch(Exception e) { System.out.println("! No vision available"); }
 
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_GCL_CONNECTED, StatusManager.EDGE_FALLING, (n)-> {
 			System.out.println("Connection to GCL lost..");
@@ -266,7 +286,7 @@ public class StartUp implements Runnable {
 
 				pack_count = 0; publish_microslam = true;
 
-				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 5) {
+				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 10) {
 					if(model.grid.toArray(grid.data)) {
 						grid.resolution = 0.05f;
 						grid.extension  = 0;
@@ -276,7 +296,6 @@ public class StartUp implements Runnable {
 						grid.tms = model.grid.tms;
 						grid.count = model.grid.count;
 						control.sendMAVLinkMessage(grid);
-						Thread.sleep(20);
 					}
 				}
 
