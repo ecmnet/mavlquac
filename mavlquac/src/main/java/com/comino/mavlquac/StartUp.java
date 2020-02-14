@@ -267,12 +267,12 @@ public class StartUp implements Runnable {
 		boolean shell_commands = false;
 		int pack_count;
 
-		DataModel model = control.getCurrentModel();
+		final DataModel model = control.getCurrentModel();
 
-		WifiQuality wifi = new WifiQuality();
-		CPUTemperature temp = new CPUTemperature();
-		msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
-		msg_msp_status msg = new msg_msp_status(2,1);
+		final WifiQuality wifi = new WifiQuality();
+		final CPUTemperature temp = new CPUTemperature();
+		final msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
+		final msg_msp_status msg = new msg_msp_status(2,1);
 
 
 		while(true) {
@@ -289,11 +289,11 @@ public class StartUp implements Runnable {
 				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 10) {
 					if(model.grid.toArray(grid.data)) {
 						grid.resolution = 0.05f;
-						grid.extension  = 0;
+						grid.extension  = model.grid.getExtension();
 						grid.cx  = model.grid.getIndicatorX();
 						grid.cy  = model.grid.getIndicatorY();
 						grid.cz  = model.grid.getIndicatorZ();
-						grid.tms = model.grid.tms;
+						grid.tms = model.sys.getSynchronizedPX4Time_us();
 						grid.count = model.grid.count;
 						control.sendMAVLinkMessage(grid);
 					}
