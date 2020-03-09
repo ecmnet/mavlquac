@@ -45,6 +45,15 @@ public class MSPPreflightCheck {
         if(model.sys.isSensorAvailable(Status.MSP_GPS_AVAILABILITY) && model.gps.fixtype < 3)
 			checkFailed("[msp] No GPS fix available ", WARN);
 
+        // Is Flow available ?
+        if(!model.sys.isSensorAvailable(Status.MSP_PIX4FLOW_AVAILABILITY))
+			checkFailed("[msp] No Flow data available ", WARN);
+
+        // Is Vision available ?
+        if(!model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY))
+			checkFailed("[msp] No vision data available ", WARN);
+
+
         // Is LPOS available
         if(!model.sys.isStatus(Status.MSP_LPOS_VALID))
      		checkFailed("[msp] LPOS not available", FAILED);
@@ -97,6 +106,7 @@ public class MSPPreflightCheck {
 		}
 		if(level > maxLevel)
 			maxLevel = level;
+
 	}
 
 }
