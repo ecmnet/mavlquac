@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2017 Eike Mansfeld ecm@gmx.de. All rights reserved.
+ *   Copyright (c) 2020 Eike Mansfeld ecm@gmx.de. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -211,6 +211,16 @@ public class StartUp implements Runnable {
 			//				    pose.start();
 			//				}
 
+
+			//*** T265 odometry
+
+			try {
+
+				pose = new MAVT265PositionEstimator(control, config, 320,240, MAVT265PositionEstimator.LPOS_MODE_NED);
+				pose.start();
+
+			} catch(Exception e) { System.out.println("! No pose estimation available"); }
+
 			//*** R200 Depth estimation
 
 			try {
@@ -222,16 +232,6 @@ public class StartUp implements Runnable {
 				System.out.println("! No depth estimation available");
 				//e.printStackTrace();
 			}
-
-
-			//*** T265 odometry
-
-			try {
-
-				pose = new MAVT265PositionEstimator(control, config, 320,240, MAVT265PositionEstimator.LPOS_MODE_NED);
-				pose.start();
-
-			} catch(Exception e) { System.out.println("! No pose estimation available"); }
 
 			//***********
 
