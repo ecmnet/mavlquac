@@ -37,26 +37,44 @@ public class MSPPreflightCheck {
 
 		maxLevel  = OK;
 
-		// LIDAR CHECK
+		// Is LIDAR available ?
 		if(!model.sys.isSensorAvailable(Status.MSP_LIDAR_AVAILABILITY) && !model.sys.isSensorAvailable(Status.MSP_SONAR_AVAILABILITY))
 			checkFailed("[msp] No distance sensor available", WARN);
 
 		// Is GPS with Fix available ?
         if(model.sys.isSensorAvailable(Status.MSP_GPS_AVAILABILITY) && model.gps.fixtype < 3)
-						checkFailed("[msp] No GPS fix available ", WARN);
+			checkFailed("[msp] No GPS fix available ", WARN);
 
-        // Is GPOS available
+        // Is LPOS available
         if(!model.sys.isStatus(Status.MSP_LPOS_VALID))
      		checkFailed("[msp] LPOS not available", FAILED);
 
+        // Is GPOS available
+        if(!model.sys.isStatus(Status.MSP_GPOS_VALID))
+     		checkFailed("[msp] LPOS not available", WARN);
+
         // check Alt.amsl
      	if(Float.isNaN(model.hud.ag))
-     		checkFailed("Altitude amsl not available", WARN);
-
+     		checkFailed("[msp] Altitude amsl not available", WARN);
 
      	// Is IMU available ?
      	if(!model.sys.isSensorAvailable(Status.MSP_IMU_AVAILABILITY))
-     		checkFailed("IMU not available", FAILED);
+     		checkFailed("[msp] IMU not available", FAILED);
+
+        // Is relative altitude < 20 ?
+     	if(model.hud.ar > 0.2)
+     		checkFailed("[msp] Vehicle not on ground", FAILED);
+
+        // Check if kill switch is disabled
+        if(params.getParam("CBRK_IO_SAFETY")!=null && params.getParam("CBRK_IO_SAFETY").value != 0)
+     		checkFailed("[msp] IO SafetyBreaker set", WARN);
+
+        // Check if RTL altitude is set
+     	if(params.getParam("RTL_RETURN_ALT")!=null && params.getParam("RTL_RETURN_ALT").value != 1.0)
+     		checkFailed("[msp] Return altitude not set to 1.0m", WARN);
+
+
+     	// ...more
 
 		return maxLevel;
 	}
