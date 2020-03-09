@@ -38,6 +38,7 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.OperatingSystemMXBean;
 import java.net.InetSocketAddress;
 
+import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_status;
@@ -53,6 +54,7 @@ import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4ParamReader;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
+import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavmap.mapper.impl.FwDirectDepthDetector;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
@@ -133,7 +135,7 @@ public class StartUp implements Runnable {
 		logger = MSPLogger.getInstance(control);
 
 		commander = new MSPCommander(control,config);
-	//	commander.getAutopilot().resetMap();
+		//	commander.getAutopilot().resetMap();
 
 		control.start();
 		model = control.getCurrentModel();
@@ -141,9 +143,18 @@ public class StartUp implements Runnable {
 		params = new PX4ParamReader(control);
 
 		control.getStatusManager().addListener(Status.MSP_CONNECTED, (n) -> {
-	      if(n.isStatus(Status.MSP_CONNECTED))
-	    	  params.requestRefresh();
+			if(n.isStatus(Status.MSP_CONNECTED))
+				params.requestRefresh();
 		});
+
+		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
+				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
+					if(MSPPreflightCheck.getInstance(control).performCheck(model, params)==MSPPreflightCheck.FAILED) {
+						control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,0 );
+						logger.writeLocalMsg("[msp] Disarmed. PreFlight health check failed",
+								 MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+					}
+				});
 
 
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_SERVICES,
@@ -178,70 +189,70 @@ public class StartUp implements Runnable {
 
 		try {	Thread.sleep(200); } catch(Exception e) { }
 
-			if(config.getBoolProperty("vision_enabled", "true")) {
+		if(config.getBoolProperty("vision_enabled", "true")) {
 
-//				if(config.getBoolProperty("vision_highres", "false"))
-//					info = new RealSenseInfo(640,480, RealSenseInfo.MODE_RGB);
-//				else
-//					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
+			//				if(config.getBoolProperty("vision_highres", "false"))
+			//					info = new RealSenseInfo(640,480, RealSenseInfo.MODE_RGB);
+			//				else
+			//					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
 
-				streamer = new HttpMJPEGHandler<Planar<GrayU8>>(320,240, control.getCurrentModel());
+			streamer = new HttpMJPEGHandler<Planar<GrayU8>>(320,240, control.getCurrentModel());
 
-//*** R200 Odometry, Mapping, Groundtruth via T265
+			//*** R200 Odometry, Mapping, Groundtruth via T265
 
 
-				//	vision = new MAVVisualPositionEstimatorVO(info, control, config, streamer);
-//				vision = new MAVVisualPositionEstimatorVIO(info, control, config, streamer);
-//				vision.registerDetector(new FwDirectDepthDetector(control,config,commander.getMap(),streamer));
-//				pose = new StreamRealSensePose(control, StreamRealSensePose.GROUNDTRUTH_MODE, streamer);
+			//	vision = new MAVVisualPositionEstimatorVO(info, control, config, streamer);
+			//				vision = new MAVVisualPositionEstimatorVIO(info, control, config, streamer);
+			//				vision.registerDetector(new FwDirectDepthDetector(control,config,commander.getMap(),streamer));
+			//				pose = new StreamRealSensePose(control, StreamRealSensePose.GROUNDTRUTH_MODE, streamer);
 
-//				if(vision!=null && !vision.isRunning()) {
-//					vision.start();
-//				    pose.start();
-//				}
+			//				if(vision!=null && !vision.isRunning()) {
+			//					vision.start();
+			//				    pose.start();
+			//				}
 
-//*** R200 Depth estimation
+			//*** R200 Depth estimation
 
-				try {
+			try {
 
 				depth = new MAVR200DepthEstimator(control, config, 320,240, commander.getMap(), streamer);
 				depth.start();
 
-				} catch(Exception e) {
-					System.out.println("! No depth estimation available");
-					//e.printStackTrace();
-				}
+			} catch(Exception e) {
+				System.out.println("! No depth estimation available");
+				//e.printStackTrace();
+			}
 
 
-//*** T265 odometry
+			//*** T265 odometry
 
-				try {
+			try {
 
 				pose = new MAVT265PositionEstimator(control, config, 320,240, MAVT265PositionEstimator.LPOS_MODE_NED);
 				pose.start();
 
-				} catch(Exception e) { System.out.println("! No pose estimation available"); }
+			} catch(Exception e) { System.out.println("! No pose estimation available"); }
 
-//***********
+			//***********
 
-				try {
+			try {
 
 
 				HttpServer server;
 
-					server = HttpServer.create(new InetSocketAddress(8080),2);
-					server.createContext("/mjpeg", streamer);
-					server.setExecutor(ExecutorService.get()); // creates a default executor
-					server.start();
+				server = HttpServer.create(new InetSocketAddress(8080),2);
+				server.createContext("/mjpeg", streamer);
+				server.setExecutor(ExecutorService.get()); // creates a default executor
+				server.start();
 
-				} catch(Exception e) { System.out.println("! No vision stream available"); }
+			} catch(Exception e) { System.out.println("! No vision stream available"); }
 
 
-			}
+		}
 
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_GCL_CONNECTED, StatusManager.EDGE_FALLING, (n)-> {
 			System.out.println("Connection to GCL lost..");
-		//	streamer.stop();
+			//	streamer.stop();
 
 		});
 
@@ -312,8 +323,9 @@ public class StartUp implements Runnable {
 				if(!control.isSimulation()) {
 
 					if(!shell_commands ) {
-					    //control.sendShellCommand("rm3100 start");
-						//control.sendShellCommand("tune_control play -m MFT200e8a8aE");
+						//control.sendShellCommand("rm3100 start");
+						control.sendShellCommand("sf1xx start -a");
+						control.sendShellCommand("dshot beep5");
 						shell_commands = true;
 					}
 
