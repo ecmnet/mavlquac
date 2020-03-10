@@ -90,7 +90,7 @@ public class MSPPreflightCheck {
 
         // Is GPOS available
         if(!model.sys.isStatus(Status.MSP_GPOS_VALID))
-     		checkFailed("[msp] LPOS not available", WARN);
+     		checkFailed("[msp] GPOS not available", WARN);
 
         // check Alt.amsl
      	if(Float.isNaN(model.hud.ag))
@@ -99,10 +99,6 @@ public class MSPPreflightCheck {
      	// Is IMU available ?
      	if(!model.sys.isSensorAvailable(Status.MSP_IMU_AVAILABILITY))
      		checkFailed("[msp] IMU not available", FAILED);
-
-        // Is relative altitude < 0.2m ?
-     	if(model.hud.ar > 0.2)
-     		checkFailed("[msp] Vehicle not on ground", WARN);
 
         // Check if kill switch is disabled
         if(params.getParam("CBRK_IO_SAFETY")!=null && params.getParam("CBRK_IO_SAFETY").value != 0)
