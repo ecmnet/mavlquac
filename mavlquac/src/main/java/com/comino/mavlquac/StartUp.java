@@ -122,7 +122,7 @@ public class StartUp implements Runnable {
 			System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
 			try {
-				Thread.sleep(8000);
+				Thread.sleep(1000);
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}
@@ -325,7 +325,7 @@ public class StartUp implements Runnable {
 					if(!shell_commands ) {
 						//control.sendShellCommand("rm3100 start");
 						control.sendShellCommand("sf1xx start -a");
-						control.sendShellCommand("dshot beep5");
+						control.sendShellCommand("dshot beep2");
 						shell_commands = true;
 					}
 
