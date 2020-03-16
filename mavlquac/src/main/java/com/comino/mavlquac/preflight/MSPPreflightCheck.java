@@ -69,7 +69,10 @@ public class MSPPreflightCheck {
 
 		// Is LIDAR available ?
 		if(!model.sys.isSensorAvailable(Status.MSP_LIDAR_AVAILABILITY) && !model.sys.isSensorAvailable(Status.MSP_SONAR_AVAILABILITY))
-			checkFailed("[msp] No distance sensor available", WARN);
+			if(control.isSimulation())
+			 checkFailed("[msp] No distance sensor available", WARN);
+			else
+			 checkFailed("[msp] No distance sensor available", FAILED);
 
 		// Is GPS with Fix available ?
         if(model.sys.isSensorAvailable(Status.MSP_GPS_AVAILABILITY) && model.gps.fixtype < 3)

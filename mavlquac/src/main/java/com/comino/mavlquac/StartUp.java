@@ -40,6 +40,7 @@ import java.net.InetSocketAddress;
 
 import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_SEVERITY;
+import org.mavlink.messages.lquac.msg_heartbeat;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_status;
 import org.mavlink.messages.lquac.msg_timesync;
@@ -133,6 +134,7 @@ public class StartUp implements Runnable {
 		mxBean = java.lang.management.ManagementFactory.getMemoryMXBean();
 
 		logger = MSPLogger.getInstance(control);
+		logger.enableDebugMessages(true);
 
 		commander = new MSPCommander(control,config);
 		//	commander.getAutopilot().resetMap();
@@ -250,11 +252,7 @@ public class StartUp implements Runnable {
 
 		}
 
-		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_GCL_CONNECTED, StatusManager.EDGE_FALLING, (n)-> {
-			System.out.println("Connection to GCL lost..");
-			//	streamer.stop();
-
-		});
+		control.connect();
 
 
 		this.publish_microslam = config.getBoolProperty("slam_publish_microslam", "true");
@@ -291,7 +289,6 @@ public class StartUp implements Runnable {
 
 				if(!control.isConnected()) {
 					Thread.sleep(200);
-					control.connect();
 					continue;
 				}
 
@@ -324,8 +321,8 @@ public class StartUp implements Runnable {
 
 					if(!shell_commands ) {
 						//control.sendShellCommand("rm3100 start");
-						control.sendShellCommand("sf1xx start -a");
-						control.sendShellCommand("dshot beep2");
+						//control.sendShellCommand("sf1xx start -a");
+						control.sendShellCommand("dshot beep4");
 						shell_commands = true;
 					}
 
