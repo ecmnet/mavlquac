@@ -39,7 +39,7 @@ import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.LogMessage;
 import com.comino.mavcom.model.segment.Status;
-import com.comino.mavcom.param.PX4ParamReader;
+import com.comino.mavcom.param.PX4Parameters;
 
 public class MSPPreflightCheck {
 
@@ -63,7 +63,7 @@ public class MSPPreflightCheck {
 
 	}
 
-	public int performCheck(DataModel model, PX4ParamReader params) {
+	public int performCheck(DataModel model, PX4Parameters params) {
 
 		maxLevel  = OK;
 

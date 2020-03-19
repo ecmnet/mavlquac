@@ -52,7 +52,7 @@ import com.comino.mavcom.control.impl.MAVProxyController;
 import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
-import com.comino.mavcom.param.PX4ParamReader;
+import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
@@ -96,7 +96,7 @@ public class StartUp implements Runnable {
 	private boolean is_simulation;
 
 	private MSPLogger logger;
-	private PX4ParamReader params;
+	private PX4Parameters params;
 
 	public StartUp(String[] args) {
 
@@ -136,13 +136,14 @@ public class StartUp implements Runnable {
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
 
-		commander = new MSPCommander(control,config);
-		//	commander.getAutopilot().resetMap();
 
 		control.start();
 		model = control.getCurrentModel();
 
-		params = new PX4ParamReader(control);
+		params = PX4Parameters.getInstance(control);
+
+		commander = new MSPCommander(control,config);
+		//	commander.getAutopilot().resetMap();
 
 		control.getStatusManager().addListener(Status.MSP_CONNECTED, (n) -> {
 			if(n.isStatus(Status.MSP_CONNECTED))
