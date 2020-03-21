@@ -147,6 +147,12 @@ public class StartUp implements Runnable {
 				params.requestRefresh();
 		});
 
+		// Set initial PX4 Parameters
+		control.getStatusManager().addListener(Status.MSP_PARAMS_LOADED, (n) -> {
+			if(n.isStatus(Status.MSP_PARAMS_LOADED))
+				params.sendParameter("COM_OBS_AVOID", 0);
+		});
+
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
 				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
 					if(MSPPreflightCheck.getInstance(control).performCheck(model, params)==MSPPreflightCheck.FAILED) {
