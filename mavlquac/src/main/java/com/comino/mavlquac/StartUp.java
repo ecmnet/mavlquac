@@ -38,7 +38,9 @@ import java.lang.management.OperatingSystemMXBean;
 import java.net.InetSocketAddress;
 
 import org.mavlink.messages.MAV_CMD;
+import org.mavlink.messages.MAV_COMPONENT;
 import org.mavlink.messages.MAV_SEVERITY;
+import org.mavlink.messages.lquac.msg_heartbeat;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_status;
 import org.mavlink.messages.lquac.msg_timesync;
@@ -279,6 +281,8 @@ public class StartUp implements Runnable {
 		long blink = tms;
 		boolean shell_commands = false;
 		int pack_count;
+
+		final msg_heartbeat beat_gcs = new msg_heartbeat(2,MAV_COMPONENT.MAV_COMP_ID_AUTOPILOT1);
 
 		final DataModel model = control.getCurrentModel();
 
