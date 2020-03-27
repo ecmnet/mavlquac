@@ -74,6 +74,10 @@ import boofcv.struct.image.Planar;
 
 public class StartUp implements Runnable {
 
+	private static final int  MODE_LOC 	= 0;
+	private static final int  MODE_LQ  	= 1;
+	private static final int  MODE_SRV  = 2;
+
 	IMAVMSPController    control = null;
 	MSPConfig	          config  = null;
 
@@ -92,7 +96,7 @@ public class StartUp implements Runnable {
 	private MAVR200DepthEstimator depth = null;
 
 	private boolean publish_microslam;
-	private boolean is_simulation;
+	private int mode;
 
 	private MSPLogger logger;
 	private PX4Parameters params;
@@ -105,15 +109,22 @@ public class StartUp implements Runnable {
 		ExecutorService.create();
 
 		if(args.length != 0) {
-			is_simulation = true;
+			if(args[0].contains("SIM"))
+			   mode = MAVController.MODE_SITL;
+			else
+			if(args[0].contains("SERVER"))
+				mode = MAVController.MODE_SERVER;
+			else
+			if(args[0].contains("USB"))
+				mode = MAVController.MODE_USB;
+			else
+				mode = MAVController.MODE_NORMAL;
 		}
 
-		RealSenseInfo info = null;
-
-		if(is_simulation) {
+		if(mode != MAVController.MODE_NORMAL) {
 			config  = MSPConfig.getInstance(System.getProperty("user.home")+"/","msp.properties");
-			control = new MAVProxyController(MAVController.MODE_SITL);
-			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion());
+			control = new MAVProxyController(mode);
+			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
 		else {
 
@@ -227,7 +238,8 @@ public class StartUp implements Runnable {
 				pose = new MAVT265PositionEstimator(control, config, 320,240, MAVT265PositionEstimator.LPOS_MODE_NED);
 				pose.start();
 
-			} catch(Exception e) { System.out.println("! No pose estimation available"); }
+			} catch(UnsatisfiedLinkError | Exception e ) { System.out.println("! No pose estimation available"); }
+
 
 			//*** R200 Depth estimation
 
@@ -236,10 +248,9 @@ public class StartUp implements Runnable {
 				depth = new MAVR200DepthEstimator(control, config, 320,240, commander.getMap(), streamer);
 				depth.start();
 
-			} catch(Exception e) {
-				System.out.println("! No depth estimation available");
-				//e.printStackTrace();
-			}
+			} catch(UnsatisfiedLinkError | Exception e) { 	System.out.println("! No depth estimation available"); 	}
+
+
 
 			//***********
 
@@ -268,8 +279,10 @@ public class StartUp implements Runnable {
 
 	public static void main(String[] args)  {
 
+		try {
 		if(args.length==0)
 			UpLEDControl.clear();
+		} catch(Exception e) { };
 
 		new StartUp(args);
 
@@ -325,7 +338,7 @@ public class StartUp implements Runnable {
 				tms = System.currentTimeMillis();
 
 
-				if(!control.isSimulation()) {
+				if(mode==MAVController.MODE_NORMAL) {
 
 					if(!shell_commands ) {
 						//control.sendShellCommand("rm3100 start");
@@ -352,7 +365,7 @@ public class StartUp implements Runnable {
 				msg.unix_time_us = System.currentTimeMillis() * 1000;
 				control.sendMAVLinkMessage(msg);
 
-				if((System.currentTimeMillis()-blink) < 3000 || is_simulation)
+				if((System.currentTimeMillis()-blink) < 3000 || mode != MAVController.MODE_NORMAL)
 					continue;
 
 				blink = System.currentTimeMillis();
@@ -361,6 +374,7 @@ public class StartUp implements Runnable {
 				sync_s.tc1 = 0;
 				sync_s.ts1 = System.currentTimeMillis()*1000000L;
 				control.sendMAVLinkMessage(sync_s);
+
 
 				if(model.sys.isStatus(Status.MSP_ACTIVE))
 					UpLEDControl.flash("green", 10);
