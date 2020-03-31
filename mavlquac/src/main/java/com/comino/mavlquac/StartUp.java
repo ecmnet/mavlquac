@@ -33,8 +33,6 @@
 
 package com.comino.mavlquac;
 
-import java.lang.management.MemoryMXBean;
-import java.lang.management.OperatingSystemMXBean;
 import java.net.InetSocketAddress;
 
 import org.mavlink.messages.MAV_CMD;
@@ -59,13 +57,10 @@ import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
-import com.comino.mavodometry.librealsense.r200.RealSenseInfo;
 import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
+import com.comino.mavutils.hw.HardwareControl;
+import com.comino.mavutils.hw.upboard.UpLEDControl;
 import com.comino.mavutils.legacy.ExecutorService;
-import com.comino.mavutils.linux.LinuxUtils;
-import com.comino.mavutils.upboard.CPUTemperature;
-import com.comino.mavutils.upboard.UpLEDControl;
-import com.comino.mavutils.upboard.WifiQuality;
 import com.sun.net.httpserver.HttpServer;
 
 import boofcv.concurrency.BoofConcurrency;
@@ -74,15 +69,14 @@ import boofcv.struct.image.Planar;
 
 public class StartUp implements Runnable {
 
-	private static final int  MODE_LOC 	= 0;
-	private static final int  MODE_LQ  	= 1;
-	private static final int  MODE_SRV  = 2;
+	private static final int WIDTH  = 320;
+	private static final int HEIGHT = 240;
+
+	//	private static final int WIDTH  = 640;
+	//	private static final int HEIGHT = 480;
 
 	IMAVMSPController    control = null;
 	MSPConfig	          config  = null;
-
-	private OperatingSystemMXBean osBean = null;
-	private MemoryMXBean mxBean = null;
 
 	private HttpMJPEGHandler<Planar<GrayU8>> streamer = null;
 
@@ -103,6 +97,7 @@ public class StartUp implements Runnable {
 
 	public StartUp(String[] args) {
 
+		//		new JetsonNanoInferenceTest();
 
 		BoofConcurrency.setMaxThreads(2);
 
@@ -110,23 +105,20 @@ public class StartUp implements Runnable {
 
 		if(args.length != 0) {
 			if(args[0].contains("SIM"))
-			   mode = MAVController.MODE_SITL;
+				mode = MAVController.MODE_SITL;
 			else
-			if(args[0].contains("SERVER"))
-				mode = MAVController.MODE_SERVER;
-			else
-			if(args[0].contains("USB"))
-				mode = MAVController.MODE_USB;
-			else
-				mode = MAVController.MODE_NORMAL;
+				if(args[0].contains("SERVER"))
+					mode = MAVController.MODE_SERVER;
+				else
+					if(args[0].contains("USB"))
+						mode = MAVController.MODE_USB;
+					else
+						mode = MAVController.MODE_NORMAL;
 		}
 
-		if(mode != MAVController.MODE_NORMAL) {
-			config  = MSPConfig.getInstance(System.getProperty("user.home")+"/","msp.properties");
-			control = new MAVProxyController(mode);
-			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
-		}
-		else {
+		switch(mode) {
+
+		case  MAVController.MODE_NORMAL:
 
 			config  = MSPConfig.getInstance("/home/lquac/","msp.properties");
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
@@ -138,10 +130,22 @@ public class StartUp implements Runnable {
 				e1.printStackTrace();
 			}
 
+			break;
+
+		case MAVController.MODE_SERVER:
+
+			config  = MSPConfig.getInstance("/home/ecm/lquac/","msp.properties");
+			control = new MAVProxyController(MAVController.MODE_SERVER);
+			System.out.println("MSPControlService (LQUAC JetsonNano) version "+config.getVersion()+" Mode = "+mode);
+			break;
+
+		default:
+
+			config  = MSPConfig.getInstance(System.getProperty("user.home")+"/","msp.properties");
+			control = new MAVProxyController(mode);
+			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
 
-		osBean =  java.lang.management.ManagementFactory.getOperatingSystemMXBean();
-		mxBean = java.lang.management.ManagementFactory.getMemoryMXBean();
 
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
@@ -171,7 +175,7 @@ public class StartUp implements Runnable {
 					if(MSPPreflightCheck.getInstance(control).performCheck(model, params)==MSPPreflightCheck.FAILED) {
 						control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,0 );
 						logger.writeLocalMsg("[msp] Disarmed. PreFlight health check failed",
-								 MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+								MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 					}
 				});
 
@@ -215,7 +219,7 @@ public class StartUp implements Runnable {
 			//				else
 			//					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
 
-			streamer = new HttpMJPEGHandler<Planar<GrayU8>>(320,240, control.getCurrentModel());
+			streamer = new HttpMJPEGHandler<Planar<GrayU8>>(WIDTH,HEIGHT, control.getCurrentModel());
 
 			//*** R200 Odometry, Mapping, Groundtruth via T265
 
@@ -235,7 +239,7 @@ public class StartUp implements Runnable {
 
 			try {
 
-				pose = new MAVT265PositionEstimator(control, config, 320,240, MAVT265PositionEstimator.LPOS_MODE_NED);
+				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_MODE_NED);
 				pose.start();
 
 			} catch(UnsatisfiedLinkError | Exception e ) { System.out.println("! No pose estimation available"); }
@@ -245,7 +249,7 @@ public class StartUp implements Runnable {
 
 			try {
 
-				depth = new MAVR200DepthEstimator(control, config, 320,240, commander.getMap(), streamer);
+				depth = new MAVR200DepthEstimator(control, config, WIDTH,HEIGHT, commander.getMap(), streamer);
 				depth.start();
 
 			} catch(UnsatisfiedLinkError | Exception e) { 	System.out.println("! No depth estimation available"); 	}
@@ -280,8 +284,8 @@ public class StartUp implements Runnable {
 	public static void main(String[] args)  {
 
 		try {
-		if(args.length==0)
-			UpLEDControl.clear();
+			if(args.length==0)
+				UpLEDControl.clear();
 		} catch(Exception e) { };
 
 		new StartUp(args);
@@ -299,10 +303,10 @@ public class StartUp implements Runnable {
 
 		final DataModel model = control.getCurrentModel();
 
-		final WifiQuality wifi = new WifiQuality();
-		final CPUTemperature temp = new CPUTemperature();
 		final msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
 		final msg_msp_status msg = new msg_msp_status(2,1);
+
+		final HardwareControl hw = new HardwareControl();
 
 
 		while(true) {
@@ -347,21 +351,21 @@ public class StartUp implements Runnable {
 						shell_commands = true;
 					}
 
-					wifi.getQuality();
-					temp.getTemperature();
 				}
 
-				msg.load = LinuxUtils.getProcessCpuLoad();
-				msg.memory = (int)(mxBean.getHeapMemoryUsage().getUsed() * 100 /mxBean.getHeapMemoryUsage().getMax());
-				msg.wifi_quality = (byte)wifi.get();
+				hw.update();
+
+				msg.load = hw.getCPULoad();
+				msg.memory = hw.getMemoryUsage();
+				msg.wifi_quality = hw.getWifiQuality();
 				msg.threads = Thread.activeCount();
-				msg.cpu_temp = (byte)temp.get();
+				msg.cpu_temp = hw.getTemperature();
 				msg.com_error = control.getErrorCount();
 				msg.autopilot_mode =control.getCurrentModel().sys.autopilot;
 				msg.uptime_ms = System.currentTimeMillis() - startTime_ms;
 				msg.status = control.getCurrentModel().sys.getStatus();
 				msg.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
-				msg.setArch(osBean.getArch());
+				msg.setArch(hw.getArchitecture());
 				msg.unix_time_us = System.currentTimeMillis() * 1000;
 				control.sendMAVLinkMessage(msg);
 
