@@ -6,7 +6,9 @@
 	<property name="lib.dir" value="lib" />
 	<property name="target.dir" value="target" />
 	<property name="props.dir" value="properties" />
-	<property name="deploy.dir" value="/Volumes/lquac" />
+
+	<property name="deploy_up.dir" value="/Volumes/lquac" />
+	<property name="deploy_jetson.dir" value="/Volumes/homes/lquac" />
 
 
 	<target name="com" >
@@ -45,17 +47,9 @@
 		</exec>
 	</target>
 
-	<target name="build"  depends="lquac">
-			<copy todir="${deploy_mavgcl.dir}">
-				<fileset dir="${target.dir}/deploy">
-					<include name="mavcom*.jar" />
-				</fileset>
-			</copy>
-	</target>
-
-	<target name="deploy" depends="lquac">
-		<copy file="${target.dir}/mavlquac-0.0.1-jar-with-dependencies.jar" todir="${deploy.dir}"/>
-		<copy file="${props.dir}/msp.properties" todir="${deploy.dir}"/>
+	<target name="upboard" depends="lquac">
+		<copy file="${target.dir}/mavlquac-0.0.1-jar-with-dependencies.jar" todir="${deploy_up.dir}"/>
+		<copy file="${props.dir}/msp.properties" todir="${deploy_up.dir}"/>
 		<!--
 		<copy todir="${deploy.dir}">
 			<fileset dir="${dis.dir}/mavlquac*-dependencies.jar" />
@@ -70,6 +64,33 @@
 			<entry key="build" value="${build.number}" />
 			<entry key="build_date" value="${current.time}" />
 		</propertyfile>
+	</target>
+
+	<target name="jetson" depends="lquac">
+			<copy file="${target.dir}/mavlquac-0.0.1-jar-with-dependencies.jar" todir="${deploy_jetson.dir}"/>
+			<copy file="${props.dir}/msp.properties" todir="${deploy_jetson.dir}"/>
+			<!--
+			<copy todir="${deploy.dir}">
+				<fileset dir="${dis.dir}/mavlquac*-dependencies.jar" />
+			</copy>
+			-->
+			<tstamp>
+				<format property="current.time" pattern="dd.MM.yyyy" />
+			</tstamp>
+			<buildnumber />
+			<echo>Current build number:${build.number}</echo>
+			<propertyfile file="${props.dir}/msp.properties">
+				<entry key="build" value="${build.number}" />
+				<entry key="build_date" value="${current.time}" />
+			</propertyfile>
+	</target>
+
+	<target name="build"  depends="lquac">
+			<copy todir="${deploy_mavgcl.dir}">
+				<fileset dir="${target.dir}/deploy">
+					<include name="mavcom*.jar" />
+				</fileset>
+			</copy>
 	</target>
 
 </project>
