@@ -38,7 +38,9 @@ import java.net.InetSocketAddress;
 import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_COMPONENT;
 import org.mavlink.messages.MAV_SEVERITY;
+import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_heartbeat;
+import org.mavlink.messages.lquac.msg_msp_command;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_status;
 import org.mavlink.messages.lquac.msg_timesync;
@@ -48,6 +50,7 @@ import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.control.impl.MAVController;
 import com.comino.mavcom.control.impl.MAVProxyController;
 import com.comino.mavcom.log.MSPLogger;
+import com.comino.mavcom.mavlink.IMAVLinkListener;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
@@ -137,6 +140,7 @@ public class StartUp implements Runnable {
 			config  = MSPConfig.getInstance("/home/ecm/lquac/","msp.properties");
 			control = new MAVProxyController(MAVController.MODE_SERVER);
 			System.out.println("MSPControlService (LQUAC JetsonNano) version "+config.getVersion()+" Mode = "+mode);
+			control.getCurrentModel().clear();
 			break;
 
 		default:
@@ -158,6 +162,18 @@ public class StartUp implements Runnable {
 
 		commander = new MSPCommander(control,config);
 		//	commander.getAutopilot().resetMap();
+
+		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
+			@Override
+			public void received(Object o) {
+				msg_msp_command cmd = (msg_msp_command)o;
+				switch(cmd.command) {
+				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
+					model.grid.invalidateTransfer();
+					break;
+				}
+			}
+		});
 
 		control.getStatusManager().addListener(Status.MSP_CONNECTED, (n) -> {
 			if(n.isStatus(Status.MSP_CONNECTED))
@@ -249,7 +265,7 @@ public class StartUp implements Runnable {
 
 			try {
 
-				depth = new MAVR200DepthEstimator(control, config, WIDTH,HEIGHT, commander.getMap(), streamer);
+				depth = new MAVR200DepthEstimator(control, commander.getAutopilot(), config, WIDTH,HEIGHT, commander.getMap(), streamer);
 				depth.start();
 
 			} catch(UnsatisfiedLinkError | Exception e) { 	System.out.println("! No depth estimation available"); 	}
@@ -368,6 +384,10 @@ public class StartUp implements Runnable {
 				msg.setArch(hw.getArchitecture());
 				msg.unix_time_us = System.currentTimeMillis() * 1000;
 				control.sendMAVLinkMessage(msg);
+
+				if(msg.cpu_temp > 80) {
+					MSPLogger.getInstance().writeLocalMsg("Companion Temperature critical. Shut down.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+				}
 
 				if((System.currentTimeMillis()-blink) < 3000 || mode != MAVController.MODE_NORMAL)
 					continue;
