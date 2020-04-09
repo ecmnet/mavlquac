@@ -61,7 +61,7 @@ import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
-import com.comino.mavutils.hw.HardwareControl;
+import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.hw.upboard.UpLEDControl;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.sun.net.httpserver.HttpServer;
@@ -322,7 +322,7 @@ public class StartUp implements Runnable {
 		final msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
 		final msg_msp_status msg = new msg_msp_status(2,1);
 
-		final HardwareControl hw = new HardwareControl();
+		final HardwareAbstraction hw = HardwareAbstraction.instance();
 
 
 		while(true) {
@@ -335,16 +335,18 @@ public class StartUp implements Runnable {
 
 				pack_count = 0; publish_microslam = true;
 
-				while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 10) {
-					if(model.grid.toArray(grid.data)) {
-						grid.resolution = 0.05f;
-						grid.extension  = model.grid.getExtension();
-						grid.cx  = model.grid.getIndicatorX();
-						grid.cy  = model.grid.getIndicatorY();
-						grid.cz  = model.grid.getIndicatorZ();
-						grid.tms = model.sys.getSynchronizedPX4Time_us();
-						grid.count = model.grid.count;
-						control.sendMAVLinkMessage(grid);
+				if(model.grid.count > 3) {
+					while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 10) {
+						if(model.grid.toArray(grid.data)) {
+							grid.resolution = 0.05f;
+							grid.extension  = model.grid.getExtension();
+							grid.cx  = model.grid.getIndicatorX();
+							grid.cy  = model.grid.getIndicatorY();
+							grid.cz  = model.grid.getIndicatorZ();
+							grid.tms = model.sys.getSynchronizedPX4Time_us();
+							grid.count = model.grid.count;
+							control.sendMAVLinkMessage(grid);
+						}
 					}
 				}
 
@@ -381,7 +383,7 @@ public class StartUp implements Runnable {
 				msg.uptime_ms = System.currentTimeMillis() - startTime_ms;
 				msg.status = control.getCurrentModel().sys.getStatus();
 				msg.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
-				msg.setArch(hw.getArchitecture());
+				msg.setArch(hw.getArchName());
 				msg.unix_time_us = System.currentTimeMillis() * 1000;
 				control.sendMAVLinkMessage(msg);
 
