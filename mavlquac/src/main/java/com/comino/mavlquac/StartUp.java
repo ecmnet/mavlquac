@@ -75,8 +75,6 @@ public class StartUp implements Runnable {
 	private static final int WIDTH  = 320;
 	private static final int HEIGHT = 240;
 
-	//	private static final int WIDTH  = 640;
-	//	private static final int HEIGHT = 480;
 
 	IMAVMSPController    control = null;
 	MSPConfig	          config  = null;
@@ -97,6 +95,8 @@ public class StartUp implements Runnable {
 
 	private MSPLogger logger;
 	private PX4Parameters params;
+
+	private final HardwareAbstraction hw = HardwareAbstraction.instance();
 
 	public StartUp(String[] args) {
 
@@ -299,11 +299,6 @@ public class StartUp implements Runnable {
 
 	public static void main(String[] args)  {
 
-		try {
-			if(args.length==0)
-				UpLEDControl.clear();
-		} catch(Exception e) { };
-
 		new StartUp(args);
 
 	}
@@ -322,7 +317,8 @@ public class StartUp implements Runnable {
 		final msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
 		final msg_msp_status msg = new msg_msp_status(2,1);
 
-		final HardwareAbstraction hw = HardwareAbstraction.instance();
+		if(hw.getArchId() == HardwareAbstraction.UPBOARD)
+			UpLEDControl.clear();
 
 
 		while(true) {
@@ -365,7 +361,7 @@ public class StartUp implements Runnable {
 					if(!shell_commands ) {
 						//control.sendShellCommand("rm3100 start");
 						//control.sendShellCommand("sf1xx start -a");
-						control.sendShellCommand("dshot beep4");
+						//control.sendShellCommand("dshot beep4");
 						shell_commands = true;
 					}
 
@@ -391,7 +387,7 @@ public class StartUp implements Runnable {
 					MSPLogger.getInstance().writeLocalMsg("Companion Temperature critical. Shut down.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 				}
 
-				if((System.currentTimeMillis()-blink) < 3000 || mode != MAVController.MODE_NORMAL)
+				if((System.currentTimeMillis()-blink) < 3000)
 					continue;
 
 				blink = System.currentTimeMillis();
@@ -400,6 +396,9 @@ public class StartUp implements Runnable {
 				sync_s.tc1 = 0;
 				sync_s.ts1 = System.currentTimeMillis()*1000000L;
 				control.sendMAVLinkMessage(sync_s);
+
+				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
+					continue;
 
 
 				if(model.sys.isStatus(Status.MSP_ACTIVE))
