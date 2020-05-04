@@ -63,7 +63,7 @@ public class MSPPreflightCheck {
 
 	}
 
-	public int performCheck(DataModel model, PX4Parameters params) {
+	public int performArmCheck(DataModel model, PX4Parameters params) {
 
 		maxLevel  = OK;
 
