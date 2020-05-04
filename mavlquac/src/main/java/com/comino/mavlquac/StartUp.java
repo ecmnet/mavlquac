@@ -188,7 +188,7 @@ public class StartUp implements Runnable {
 
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
 				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
-					if(MSPPreflightCheck.getInstance(control).performCheck(model, params)==MSPPreflightCheck.FAILED) {
+					if(MSPPreflightCheck.getInstance(control).performArmCheck(model, params)==MSPPreflightCheck.FAILED) {
 						control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,0 );
 						logger.writeLocalMsg("[msp] Disarmed. PreFlight health check failed",
 								MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
