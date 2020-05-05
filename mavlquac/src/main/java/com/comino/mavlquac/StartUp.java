@@ -182,8 +182,14 @@ public class StartUp implements Runnable {
 
 		// Set initial PX4 Parameters
 		control.getStatusManager().addListener(Status.MSP_PARAMS_LOADED, (n) -> {
-			if(n.isStatus(Status.MSP_PARAMS_LOADED))
+			if(n.isStatus(Status.MSP_PARAMS_LOADED)) {
 				params.sendParameter("COM_OBS_AVOID", 0);
+
+				if(control.isSimulation()) {
+					params.sendParameter("COM_RC_OVERRIDE", 0);
+				}
+			}
+
 		});
 
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
