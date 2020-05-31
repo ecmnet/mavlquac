@@ -184,6 +184,9 @@ public class StartUp implements Runnable {
 		control.getStatusManager().addListener(Status.MSP_PARAMS_LOADED, (n) -> {
 			if(n.isStatus(Status.MSP_PARAMS_LOADED)) {
 				params.sendParameter("COM_OBS_AVOID", 0);
+				params.sendParameter("RTL_DESCEND_ALT", 1.0f);
+				params.sendParameter("RTL_RETURN_ALT", 1.0f);
+				params.sendParameter("NAV_MC_ALT_RAD", 0.05f);
 
 				if(control.isSimulation()) {
 					params.sendParameter("COM_RC_OVERRIDE", 0);
@@ -356,7 +359,7 @@ public class StartUp implements Runnable {
 
 				Thread.sleep(50);
 
-				if((System.currentTimeMillis()-tms) < 333)
+				if((System.currentTimeMillis()-tms) < 200 )
 					continue;
 
 				tms = System.currentTimeMillis();
@@ -381,6 +384,7 @@ public class StartUp implements Runnable {
 				msg.threads = Thread.activeCount();
 				msg.cpu_temp = hw.getTemperature();
 				msg.com_error = control.getErrorCount();
+				msg.takeoff_ms = commander.getTimeSinceTakeoff();
 				msg.autopilot_mode =control.getCurrentModel().sys.autopilot;
 				msg.uptime_ms = System.currentTimeMillis() - startTime_ms;
 				msg.status = control.getCurrentModel().sys.getStatus();
