@@ -39,6 +39,7 @@ import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_COMPONENT;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
+import org.mavlink.messages.MSP_COMPONENT_CTRL;
 import org.mavlink.messages.lquac.msg_heartbeat;
 import org.mavlink.messages.lquac.msg_msp_command;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
@@ -264,7 +265,7 @@ public class StartUp implements Runnable {
 
 			try {
 
-				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_MODE_NED);
+				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_MODE_NED, streamer);
 				pose.start();
 
 			} catch(UnsatisfiedLinkError | Exception e ) { System.out.println("! No pose estimation available"); }
@@ -275,10 +276,10 @@ public class StartUp implements Runnable {
 			try {
 
 				depth = new MAVR200DepthEstimator(control, commander.getAutopilot(), config, WIDTH,HEIGHT, commander.getMap(), streamer);
+				depth.enableStream(true);
 				depth.start();
 
 			} catch(UnsatisfiedLinkError | Exception e) { 	System.out.println("! No depth estimation available"); 	}
-
 
 
 			//***********
@@ -286,7 +287,7 @@ public class StartUp implements Runnable {
 			try {
 
 
-				HttpServer server;
+				final HttpServer server;
 
 				server = HttpServer.create(new InetSocketAddress(8080),2);
 				server.createContext("/mjpeg", streamer);
@@ -299,6 +300,28 @@ public class StartUp implements Runnable {
 		}
 
 		control.connect();
+
+		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
+			@Override
+			public void received(Object o) {
+				msg_msp_command cmd = (msg_msp_command)o;
+				switch(cmd.command) {
+				case MSP_CMD.SELECT_VIDEO_STREAM:
+
+					switch((int)cmd.param1) {
+					case 1:
+						if(pose!=null)  pose.enableStream(true);
+						if(depth!=null) depth.enableStream(false);
+						break;
+					case 0:
+						if(depth!=null) depth.enableStream(true);
+						if(pose!=null)  pose.enableStream(false);
+						break;
+					}
+					break;
+				}
+			}
+		});
 
 
 		this.publish_microslam = config.getBoolProperty("slam_publish_microslam", "true");
