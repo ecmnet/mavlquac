@@ -61,6 +61,7 @@ import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
+import com.comino.mavodometry.estimators.MAVT265PositionEstimatorDown;
 import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.hw.upboard.UpLEDControl;
@@ -279,7 +280,7 @@ public class StartUp implements Runnable {
 				depth.enableStream(true);
 				depth.start();
 
-			} catch(UnsatisfiedLinkError | Exception e) { 	System.out.println("! No depth estimation available"); 	}
+			} catch(UnsatisfiedLinkError | Exception e) { 	System.out.println("! No depth estimation available"); e.printStackTrace();	}
 
 
 			//***********
