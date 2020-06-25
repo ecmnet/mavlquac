@@ -322,6 +322,14 @@ public class StartUp implements Runnable {
 			}
 		});
 
+		// To ensure, that LIDAR is started when reboot via console
+		control.getStatusManager().addListener( Status.MSP_IMU_AVAILABILITY, (n) -> {
+			if(n.isStatus(Status.MSP_IMU_AVAILABILITY)) {
+				control.sendShellCommand("sf1xx start -X");
+			//	control.sendShellCommand("rm3100 start");
+			}
+		});
+
 
 		this.publish_microslam = config.getBoolProperty("slam_publish_microslam", "true");
 		System.out.println("[vis] Publishing microSlam enabled: "+publish_microslam);
@@ -390,9 +398,9 @@ public class StartUp implements Runnable {
 				if(mode==MAVController.MODE_NORMAL) {
 
 					if(!shell_commands ) {
-						control.sendShellCommand("rm3100 start");
-						control.sendShellCommand("sf1xx start -X");
 						//control.sendShellCommand("dshot beep4");
+						control.sendShellCommand("sf1xx start -X");
+						control.sendShellCommand("rm3100 start");
 						shell_commands = true;
 					}
 
