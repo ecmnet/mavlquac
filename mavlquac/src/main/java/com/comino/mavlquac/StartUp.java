@@ -39,7 +39,6 @@ import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_COMPONENT;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
-import org.mavlink.messages.MSP_COMPONENT_CTRL;
 import org.mavlink.messages.lquac.msg_heartbeat;
 import org.mavlink.messages.lquac.msg_msp_command;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
@@ -61,7 +60,6 @@ import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
-import com.comino.mavodometry.estimators.MAVT265PositionEstimatorDown;
 import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.hw.upboard.UpLEDControl;
@@ -266,7 +264,7 @@ public class StartUp implements Runnable {
 
 			try {
 
-				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_MODE_NED, streamer);
+				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_NED, streamer);
 				pose.start();
 
 			} catch(UnsatisfiedLinkError | Exception e ) { System.out.println("! No pose estimation available"); }
@@ -280,7 +278,7 @@ public class StartUp implements Runnable {
 				depth.enableStream(true);
 				depth.start();
 
-			} catch(UnsatisfiedLinkError | Exception e) { 	System.out.println("! No depth estimation available"); e.printStackTrace();	}
+			} catch(UnsatisfiedLinkError | Exception e) { 	System.out.println("! No depth estimation available"); }
 
 
 			//***********
@@ -392,8 +390,8 @@ public class StartUp implements Runnable {
 				if(mode==MAVController.MODE_NORMAL) {
 
 					if(!shell_commands ) {
-						//control.sendShellCommand("rm3100 start");
-						//control.sendShellCommand("sf1xx start -a");
+						control.sendShellCommand("rm3100 start");
+						control.sendShellCommand("sf1xx start -X");
 						//control.sendShellCommand("dshot beep4");
 						shell_commands = true;
 					}
