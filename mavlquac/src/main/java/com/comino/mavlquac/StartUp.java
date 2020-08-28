@@ -35,6 +35,7 @@ package com.comino.mavlquac;
 
 import java.net.InetSocketAddress;
 
+import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
 import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_COMPONENT;
 import org.mavlink.messages.MAV_SEVERITY;
@@ -49,10 +50,13 @@ import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.control.impl.MAVController;
 import com.comino.mavcom.control.impl.MAVProxyController;
+import com.comino.mavcom.flow.MessageBus;
+import com.comino.mavcom.flow.ModelSubscriber;
 import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.mavlink.IMAVLinkListener;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
+import com.comino.mavcom.model.segment.Vision;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
@@ -267,7 +271,12 @@ public class StartUp implements Runnable {
 				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_NED, streamer);
 				pose.start();
 
-			} catch(UnsatisfiedLinkError | Exception e ) { System.out.println("! No pose estimation available"); }
+			} catch(UnsatisfiedLinkError | Exception e ) {
+				System.out.println("! No pose estimation available");
+
+				if(!control.isSimulation())
+					e.printStackTrace();
+			}
 
 
 			//*** R200 Depth estimation
@@ -278,9 +287,12 @@ public class StartUp implements Runnable {
 				depth.enableStream(true);
 				depth.start();
 
-			} catch(UnsatisfiedLinkError | Exception e) { 	System.out.println("! No depth estimation available"); }
+			} catch(UnsatisfiedLinkError | Exception e ) {
+				System.out.println("! No depth estimation available");
 
-
+				if(!control.isSimulation())
+					e.printStackTrace();
+			}
 			//***********
 
 			try {
@@ -326,8 +338,14 @@ public class StartUp implements Runnable {
 		control.getStatusManager().addListener( Status.MSP_IMU_AVAILABILITY, (n) -> {
 			if(n.isStatus(Status.MSP_IMU_AVAILABILITY)) {
 				control.sendShellCommand("sf1xx start -X");
-			//	control.sendShellCommand("rm3100 start");
+				//	control.sendShellCommand("rm3100 start");
 			}
+		});
+
+		control.getStatusManager().addListener(StatusManager.TYPE_ESTIMATOR, ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL, StatusManager.EDGE_FALLING, (n) -> {
+			MSPLogger.getInstance().writeLocalMsg("Position estimation failure. Action required.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+			// TODO: Eventually Emergency Off if altitude < 1m
+			// or other action to recover
 		});
 
 
@@ -369,6 +387,7 @@ public class StartUp implements Runnable {
 				}
 
 				pack_count = 0; publish_microslam = true;
+
 
 				if(model.grid.count > 3) {
 					while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 10) {
@@ -422,6 +441,8 @@ public class StartUp implements Runnable {
 				msg.setArch(hw.getArchName());
 				msg.unix_time_us = System.currentTimeMillis() * 1000;
 				control.sendMAVLinkMessage(msg);
+
+				control.sendMAVLinkMessage(beat_gcs);
 
 				if(msg.cpu_temp > 80) {
 					MSPLogger.getInstance().writeLocalMsg("Companion Temperature critical. Shut down.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
