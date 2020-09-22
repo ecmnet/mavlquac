@@ -78,10 +78,6 @@ public class MSPPreflightCheck {
         if(model.sys.isSensorAvailable(Status.MSP_GPS_AVAILABILITY) && model.gps.fixtype < 3)
 			checkFailed("[msp] No GPS fix available ", WARN);
 
-        // Is Flow available ?
-        if(!model.sys.isSensorAvailable(Status.MSP_PIX4FLOW_AVAILABILITY))
-			checkFailed("[msp] No Flow data available ", WARN);
-
         // Is Vision available ?
         if(!model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY))
 			checkFailed("[msp] No vision data available ", WARN);
