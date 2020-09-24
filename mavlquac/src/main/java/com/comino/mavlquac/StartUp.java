@@ -364,8 +364,6 @@ public class StartUp implements Runnable {
 		boolean shell_commands = false;
 		int pack_count;
 
-		final msg_heartbeat beat_gcs = new msg_heartbeat(2,MAV_COMPONENT.MAV_COMP_ID_AUTOPILOT1);
-
 		final DataModel model = control.getCurrentModel();
 
 		final msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
@@ -439,7 +437,6 @@ public class StartUp implements Runnable {
 				msg.unix_time_us = System.currentTimeMillis() * 1000;
 				control.sendMAVLinkMessage(msg);
 
-				control.sendMAVLinkMessage(beat_gcs);
 
 				if(msg.cpu_temp > 80) {
 					MSPLogger.getInstance().writeLocalMsg("Companion Temperature critical. Shut down.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
