@@ -72,7 +72,7 @@ public class MSPPreflightCheck {
 			if(control.isSimulation())
 			 checkFailed("[msp] No distance sensor available", WARN);
 			else
-			 checkFailed("[msp] No distance sensor available", FAILED);
+			 checkFailed("[msp] No distance sensor available", WARN);
 
 		// Is GPS with Fix available ?
         if(model.sys.isSensorAvailable(Status.MSP_GPS_AVAILABILITY) && model.gps.fixtype < 3)
