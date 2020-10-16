@@ -34,6 +34,11 @@
 package com.comino.mavlquac;
 
 import java.net.InetSocketAddress;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.TimeZone;
 
 import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
 import org.mavlink.messages.MAV_CMD;
@@ -44,6 +49,7 @@ import org.mavlink.messages.lquac.msg_heartbeat;
 import org.mavlink.messages.lquac.msg_msp_command;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_status;
+import org.mavlink.messages.lquac.msg_system_time;
 import org.mavlink.messages.lquac.msg_timesync;
 
 import com.comino.mavcom.config.MSPConfig;
@@ -415,7 +421,15 @@ public class StartUp implements Runnable {
 						//control.sendShellCommand("dshot beep4");
 						control.sendShellCommand("sf1xx start -X");
 						control.sendShellCommand("rm3100 start");
+						
+						// enforce NUTTX RTC set to companion time
+						SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY");   
+						sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+						String s = sdf.format(new Date());
+						control.sendShellCommand("date -s \""+s+"\"");
+						
 						shell_commands = true;
+						
 					}
 
 				}
@@ -449,7 +463,7 @@ public class StartUp implements Runnable {
 
 				msg_timesync sync_s = new msg_timesync(255,1);
 				sync_s.tc1 = 0;
-				sync_s.ts1 = System.currentTimeMillis()*1000000L;
+				sync_s.ts1 = System.currentTimeMillis()*1000L;
 				control.sendMAVLinkMessage(sync_s);
 
 				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
