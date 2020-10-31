@@ -44,8 +44,9 @@ import com.comino.mavcom.param.PX4Parameters;
 public class MSPPreflightCheck {
 
 	public static final int   OK     = 0;
-	public static final int   WARN   = 1;
-	public static final int   FAILED = 2;
+	public static final int   INFO   = 1;
+	public static final int   WARN   = 2;
+	public static final int   FAILED = 3;
 
 	private static MSPPreflightCheck instance;
 	private IMAVMSPController control = null;
@@ -76,7 +77,7 @@ public class MSPPreflightCheck {
 
 		// Is GPS with Fix available ?
         if(model.sys.isSensorAvailable(Status.MSP_GPS_AVAILABILITY) && model.gps.fixtype < 3)
-			checkFailed("[msp] No GPS fix available ", WARN);
+			checkFailed("[msp] No GPS fix available ", INFO);
 
         // Is Vision available ?
         if(!model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY))
@@ -101,11 +102,14 @@ public class MSPPreflightCheck {
 
         // Check if kill switch is disabled
         if(params.getParam("CBRK_IO_SAFETY")!=null && params.getParam("CBRK_IO_SAFETY").value != 0)
-     		checkFailed("[msp] IO SafetyBreaker set", WARN);
+     		checkFailed("[msp] IO SafetyBreaker set", INFO);
 
         // Check if RTL altitude is set
      	if(params.getParam("RTL_RETURN_ALT")!=null && params.getParam("RTL_RETURN_ALT").value != 1.0)
      		checkFailed("[msp] Return altitude not set to 1.0m", WARN);
+     	
+     	if(params.getParam("EKF2_AID_MASK")!=null && ((short)params.getParam("EKF2_AID_MASK").value & 0x0008) != 0x0008)
+     		checkFailed("[msp] Vision not fused in EKF2", WARN);
 
 
      	// ...more
@@ -117,6 +121,10 @@ public class MSPPreflightCheck {
 		LogMessage m = new LogMessage();
 		m.text = r;
 		switch(level) {
+		case INFO:
+			m.severity = MAV_SEVERITY.MAV_SEVERITY_NOTICE;
+			control.writeLogMessage(m);
+			break;
 		case WARN:
 			m.severity = MAV_SEVERITY.MAV_SEVERITY_WARNING;
 			control.writeLogMessage(m);
