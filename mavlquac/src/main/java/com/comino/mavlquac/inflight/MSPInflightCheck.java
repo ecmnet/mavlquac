@@ -13,7 +13,7 @@ import com.comino.mavutils.hw.HardwareAbstraction;
 
 public class MSPInflightCheck {
 	
-	private static final int   MAX_ERRORS = 20;
+	private static final int   MAX_ERRORS = 5;
 
 	private static final float MSP_MAX_TEMP = 80.0f;
 
@@ -24,6 +24,8 @@ public class MSPInflightCheck {
 	private HardwareAbstraction    hw = null;
 
 	private int error_count           = 0;
+
+	private boolean triggered;
 
 	public static MSPInflightCheck getInstance(IMAVMSPController control, PX4Parameters params, HardwareAbstraction hw) {
 		if(instance == null)
@@ -46,14 +48,18 @@ public class MSPInflightCheck {
 
 	public void reset() {
 		error_count = 0;
+		triggered   = false;
 	}
 
-	public void performChecks() {
-		this.performChecks(null);
+	public boolean performChecks() {
+		return this.performChecks(null);
 	}
 
-	public void performChecks(InFlightFailureAction action) {
+	public boolean performChecks(InFlightFailureAction action) {
 
+		if(triggered) {
+			return false;
+		}
 
 		// MSP Temperature check
 		if(hw.getTemperature() > MSP_MAX_TEMP) {
@@ -65,17 +71,15 @@ public class MSPInflightCheck {
 
 
 		// ....
-
-		if(error_count > 0) {
-			model.sys.setStatus(Status.MSP_ACTIVE, false);
-		}
 		
 		if(error_count > MAX_ERRORS) {
 			control.writeLogMessage(new LogMessage("InflightChecks failed. Emergency procedure triggered", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY));
 			if(action!=null)
 			   action.run();
+			triggered = true;
 		}		
+		
+		return error_count == 0;
 	}
-
 
 }

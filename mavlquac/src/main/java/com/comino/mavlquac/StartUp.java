@@ -415,7 +415,8 @@ public class StartUp implements Runnable {
 	public void run() {
 		long tms = System.currentTimeMillis();
 		long blink = tms;
-		boolean shell_commands = false;
+		boolean shell_commands = false; 
+		boolean inflight_ok = true;
 		int pack_count;
 
 		final DataModel model = control.getCurrentModel();
@@ -509,12 +510,13 @@ public class StartUp implements Runnable {
 				sync_s.ts1 = System.currentTimeMillis()*1000L;
 				control.sendMAVLinkMessage(sync_s);
 				
-				inflight.performChecks();
+				if(model.sys.isStatus(Status.MSP_ARMED))
+				   inflight_ok = inflight.performChecks();
 
 				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
 					continue;
 
-				if(model.sys.isStatus(Status.MSP_ACTIVE))
+				if(model.sys.isStatus(Status.MSP_ACTIVE) && inflight_ok)
 					UpLEDControl.flash("green", 10);
 				else
 					UpLEDControl.flash("red", 100);
