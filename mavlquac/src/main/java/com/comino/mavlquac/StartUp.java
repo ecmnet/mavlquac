@@ -33,6 +33,10 @@
 
 package com.comino.mavlquac;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -63,7 +67,9 @@ import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
+import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
+import com.comino.mavlquac.simulation.RangeFinder;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
@@ -103,11 +109,33 @@ public class StartUp implements Runnable {
 	private MSPLogger logger;
 	private PX4Parameters params;
 
+	private boolean isRunning = true;
+
 	private final HardwareAbstraction hw = HardwareAbstraction.instance();
+	
+	private MSPInflightCheck inflight = null;
 
 	public StartUp(String[] args) {
 
 		//		new JetsonNanoInferenceTest();
+
+		Runtime.getRuntime().addShutdownHook(new Thread() 
+		{ 
+			public void run() 
+			{ 
+				System.out.println("MSPControlService shutdown...");
+
+				isRunning = false;
+
+				control.close();
+
+				if(pose!=null) pose.stop();
+				if(depth!=null) depth.stop();
+
+			} 
+		}); 
+
+		//	try { redirectConsole(); } catch (IOException e2) { }
 
 		BoofConcurrency.setMaxThreads(2);
 
@@ -122,7 +150,7 @@ public class StartUp implements Runnable {
 				else
 					if(args[0].contains("USB"))
 						mode = MAVController.MODE_USB;
-					else
+					else  
 						mode = MAVController.MODE_NORMAL;
 		}
 
@@ -130,12 +158,14 @@ public class StartUp implements Runnable {
 
 		case  MAVController.MODE_NORMAL:
 
+			try { redirectConsole(); } catch (IOException e2) { }
+
 			config  = MSPConfig.getInstance("/home/lquac/","msp.properties");
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
 			System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(5000);
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}
@@ -166,6 +196,8 @@ public class StartUp implements Runnable {
 		model = control.getCurrentModel();
 
 		params = PX4Parameters.getInstance(control);
+		
+		inflight = MSPInflightCheck.getInstance(control, params, hw);
 
 		commander = new MSPCommander(control,config);
 		//	commander.getAutopilot().resetMap();
@@ -189,8 +221,7 @@ public class StartUp implements Runnable {
 
 		// Set initial PX4 Parameters
 		control.getStatusManager().addListener(Status.MSP_PARAMS_LOADED, (n) -> {
-			if(n.isStatus(Status.MSP_PARAMS_LOADED)) {
-				params.sendParameter("COM_OBS_AVOID", 0);
+			if(n.isStatus(Status.MSP_PARAMS_LOADED)) {			
 				params.sendParameter("RTL_DESCEND_ALT", 1.0f);
 				params.sendParameter("RTL_RETURN_ALT", 1.0f);
 				params.sendParameter("NAV_MC_ALT_RAD", 0.05f);
@@ -204,11 +235,12 @@ public class StartUp implements Runnable {
 
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
 				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
-					if(MSPPreflightCheck.getInstance(control).performArmCheck(model, params)==MSPPreflightCheck.FAILED) {
+					if(MSPPreflightCheck.getInstance(control).performArmCheck(params)==MSPPreflightCheck.FAILED) {
 						control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,0 );
 						logger.writeLocalMsg("[msp] Disarmed. PreFlight health check failed",
 								MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
-					}
+					} else
+						inflight.reset();
 				});
 
 
@@ -243,6 +275,10 @@ public class StartUp implements Runnable {
 		// Start services if required
 
 		try {	Thread.sleep(200); } catch(Exception e) { }
+
+		if(control.isSimulation()) {
+			new RangeFinder(control);
+		}
 
 		if(config.getBoolProperty("vision_enabled", "true")) {
 
@@ -357,6 +393,18 @@ public class StartUp implements Runnable {
 
 	}
 
+	private void redirectConsole() throws IOException {
+		File file = new File("/home/lquac/stdout.txt");
+
+		if(!file.exists())
+			file.createNewFile();
+
+		PrintStream fileOut = new PrintStream(file);
+		System.setOut(fileOut);
+		System.setErr(fileOut);
+
+	}
+
 	public static void main(String[] args)  {
 
 		new StartUp(args);
@@ -379,7 +427,7 @@ public class StartUp implements Runnable {
 			UpLEDControl.clear();
 
 
-		while(true) {
+		while(isRunning) {
 			try {
 
 				if(!control.isConnected()) {
@@ -421,15 +469,15 @@ public class StartUp implements Runnable {
 						//control.sendShellCommand("dshot beep4");
 						control.sendShellCommand("sf1xx start -X");
 						control.sendShellCommand("rm3100 start");
-						
+
 						// enforce NUTTX RTC set to companion time
 						SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY");   
 						sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 						String s = sdf.format(new Date());
 						control.sendShellCommand("date -s \""+s+"\"");
-						
+
 						shell_commands = true;
-						
+
 					}
 
 				}
@@ -451,12 +499,7 @@ public class StartUp implements Runnable {
 				msg.unix_time_us = System.currentTimeMillis() * 1000;
 				control.sendMAVLinkMessage(msg);
 
-
-				if(msg.cpu_temp > 80) {
-					MSPLogger.getInstance().writeLocalMsg("Companion Temperature critical. Shut down.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
-				}
-
-				if((System.currentTimeMillis()-blink) < 3000)
+				if((System.currentTimeMillis()-blink) < 2000)
 					continue;
 
 				blink = System.currentTimeMillis();
@@ -465,15 +508,16 @@ public class StartUp implements Runnable {
 				sync_s.tc1 = 0;
 				sync_s.ts1 = System.currentTimeMillis()*1000L;
 				control.sendMAVLinkMessage(sync_s);
+				
+				inflight.performChecks();
 
 				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
 					continue;
 
-
 				if(model.sys.isStatus(Status.MSP_ACTIVE))
 					UpLEDControl.flash("green", 10);
 				else
-					UpLEDControl.flash("red", 200);
+					UpLEDControl.flash("red", 100);
 
 			} catch (Exception e) {
 				e.printStackTrace();

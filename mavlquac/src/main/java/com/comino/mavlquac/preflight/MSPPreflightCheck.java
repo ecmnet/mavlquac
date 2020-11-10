@@ -52,6 +52,7 @@ public class MSPPreflightCheck {
 	private IMAVMSPController control = null;
 
 	private int                maxLevel  = OK;
+	private DataModel model;
 
 	public static MSPPreflightCheck getInstance(IMAVMSPController control) {
 		if(instance == null)
@@ -61,10 +62,11 @@ public class MSPPreflightCheck {
 
 	private MSPPreflightCheck(IMAVMSPController control) {
 		this.control  = control;
+		this.model    = control.getCurrentModel();
 
 	}
 
-	public int performArmCheck(DataModel model, PX4Parameters params) {
+	public int performArmCheck(PX4Parameters params) {
 
 		maxLevel  = OK;
 
