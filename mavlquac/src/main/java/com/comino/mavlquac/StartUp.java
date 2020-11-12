@@ -45,6 +45,7 @@ import java.util.Date;
 import java.util.TimeZone;
 
 import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
+import org.mavlink.messages.MAV_BATTERY_CHARGE_STATE;
 import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_COMPONENT;
 import org.mavlink.messages.MAV_SEVERITY;
@@ -67,7 +68,6 @@ import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
-import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavlquac.simulation.RangeFinder;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
@@ -112,8 +112,7 @@ public class StartUp implements Runnable {
 	private boolean isRunning = true;
 
 	private final HardwareAbstraction hw = HardwareAbstraction.instance();
-	
-	private MSPInflightCheck inflight = null;
+
 
 	public StartUp(String[] args) {
 
@@ -196,8 +195,6 @@ public class StartUp implements Runnable {
 		model = control.getCurrentModel();
 
 		params = PX4Parameters.getInstance(control);
-		
-		inflight = MSPInflightCheck.getInstance(control, params, hw);
 
 		commander = new MSPCommander(control,config);
 		//	commander.getAutopilot().resetMap();
@@ -232,6 +229,7 @@ public class StartUp implements Runnable {
 			}
 
 		});
+		
 
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
 				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
@@ -239,8 +237,7 @@ public class StartUp implements Runnable {
 						control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,0 );
 						logger.writeLocalMsg("[msp] Disarmed. PreFlight health check failed",
 								MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
-					} else
-						inflight.reset();
+					} 
 				});
 
 
@@ -390,6 +387,8 @@ public class StartUp implements Runnable {
 
 		this.publish_microslam = config.getBoolProperty("slam_publish_microslam", "true");
 		System.out.println("[vis] Publishing microSlam enabled: "+publish_microslam);
+		
+		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
 	}
 
@@ -416,7 +415,7 @@ public class StartUp implements Runnable {
 		long tms = System.currentTimeMillis();
 		long blink = tms;
 		boolean shell_commands = false; 
-		boolean inflight_ok = true;
+		
 		int pack_count;
 
 		final DataModel model = control.getCurrentModel();
@@ -510,16 +509,18 @@ public class StartUp implements Runnable {
 				sync_s.ts1 = System.currentTimeMillis()*1000L;
 				control.sendMAVLinkMessage(sync_s);
 				
-				if(model.sys.isStatus(Status.MSP_ARMED))
-				   inflight_ok = inflight.performChecks();
 
 				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
 					continue;
 
-				if(model.sys.isStatus(Status.MSP_ACTIVE) && inflight_ok)
-					UpLEDControl.flash("green", 10);
+				if(model.sys.isStatus(Status.MSP_ACTIVE)) {
+					if(model.sys.bat_state > 1)
+						UpLEDControl.flash("red", 100);
+					else
+					    UpLEDControl.flash("green", 10);
+				}
 				else
-					UpLEDControl.flash("red", 100);
+					UpLEDControl.flash("red", 500);
 
 			} catch (Exception e) {
 				e.printStackTrace();
