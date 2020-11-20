@@ -42,12 +42,14 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.Scanner;
 import java.util.TimeZone;
 
 import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
 import org.mavlink.messages.MAV_BATTERY_CHARGE_STATE;
 import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_COMPONENT;
+import org.mavlink.messages.MAV_MODE_FLAG;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_heartbeat;
@@ -63,6 +65,7 @@ import com.comino.mavcom.control.impl.MAVController;
 import com.comino.mavcom.control.impl.MAVProxyController;
 import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.mavlink.IMAVLinkListener;
+import com.comino.mavcom.mavlink.MAV_CUST_MODE;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
@@ -113,6 +116,8 @@ public class StartUp implements Runnable {
 
 	private final HardwareAbstraction hw = HardwareAbstraction.instance();
 
+	private Scanner scanner = new Scanner( System. in);
+
 
 	public StartUp(String[] args) {
 
@@ -156,8 +161,6 @@ public class StartUp implements Runnable {
 		switch(mode) {
 
 		case  MAVController.MODE_NORMAL:
-
-			try { redirectConsole(); } catch (IOException e2) { }
 
 			config  = MSPConfig.getInstance("/home/lquac/","msp.properties");
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
@@ -229,7 +232,7 @@ public class StartUp implements Runnable {
 			}
 
 		});
-		
+
 
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
 				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
@@ -387,22 +390,30 @@ public class StartUp implements Runnable {
 
 		this.publish_microslam = config.getBoolProperty("slam_publish_microslam", "true");
 		System.out.println("[vis] Publishing microSlam enabled: "+publish_microslam);
-		
+
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
 	}
 
-	private void redirectConsole() throws IOException {
-		File file = new File("/home/lquac/stdout.txt");
-
-		if(!file.exists())
-			file.createNewFile();
-
-		PrintStream fileOut = new PrintStream(file);
-		System.setOut(fileOut);
-		System.setErr(fileOut);
-
-	}
+//	private void processConsoleCommands(String s) {
+//		if(s.toLowerCase().contains("arm")) {
+//			if(!model.sys.isStatus(Status.MSP_ARMED)) {
+//				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,1 );
+//				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_DO_SET_MODE,
+//						MAV_MODE_FLAG.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED | MAV_MODE_FLAG.MAV_MODE_FLAG_SAFETY_ARMED,
+//						MAV_CUST_MODE.PX4_CUSTOM_MAIN_MODE_MANUAL, 0 );
+//			}
+//		} else if(s.toLowerCase().contains("takeoff")) {
+//			commander.getAutopilot().countDownAndTakeoff(3, true);
+//		} else if(s.toLowerCase().contains("land")) {
+//			control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_NAV_LAND, 0, 2, 0, 0 );
+//		} else if(s.toLowerCase().contains("status")) {
+//			
+//		} else {
+//			System.out.println("Unknown command");
+//		}
+//
+//	}
 
 	public static void main(String[] args)  {
 
@@ -415,7 +426,7 @@ public class StartUp implements Runnable {
 		long tms = System.currentTimeMillis();
 		long blink = tms;
 		boolean shell_commands = false; 
-		
+
 		int pack_count;
 
 		final DataModel model = control.getCurrentModel();
@@ -428,6 +439,7 @@ public class StartUp implements Runnable {
 
 
 		while(isRunning) {
+
 			try {
 
 				if(!control.isConnected()) {
@@ -488,7 +500,8 @@ public class StartUp implements Runnable {
 				msg.memory = hw.getMemoryUsage();
 				msg.wifi_quality = hw.getWifiQuality();
 				msg.threads = Thread.activeCount();
-				msg.cpu_temp = hw.getTemperature();
+				msg.cpu_temp = (byte)hw.getCPUTemperature();
+				msg.bat_temp = (byte)hw.getBatteryTemperature();
 				msg.com_error = control.getErrorCount();
 				msg.takeoff_ms = commander.getTimeSinceTakeoff();
 				msg.autopilot_mode =control.getCurrentModel().sys.autopilot;
@@ -508,7 +521,7 @@ public class StartUp implements Runnable {
 				sync_s.tc1 = 0;
 				sync_s.ts1 = System.currentTimeMillis()*1000L;
 				control.sendMAVLinkMessage(sync_s);
-				
+
 
 				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
 					continue;
@@ -517,7 +530,7 @@ public class StartUp implements Runnable {
 					if(model.sys.bat_state > 1)
 						UpLEDControl.flash("red", 100);
 					else
-					    UpLEDControl.flash("green", 10);
+						UpLEDControl.flash("green", 10);
 				}
 				else
 					UpLEDControl.flash("red", 500);
