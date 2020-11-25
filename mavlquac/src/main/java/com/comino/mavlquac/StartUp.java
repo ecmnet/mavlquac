@@ -426,6 +426,8 @@ public class StartUp implements Runnable {
 		long tms = System.currentTimeMillis();
 		long blink = tms;
 		boolean shell_commands = false; 
+		
+		boolean emergency = false;
 
 		int pack_count;
 
@@ -512,11 +514,12 @@ public class StartUp implements Runnable {
 				msg.unix_time_us = System.currentTimeMillis() * 1000;
 				control.sendMAVLinkMessage(msg);
 
-				if((System.currentTimeMillis()-blink) < 2000)
+				if((System.currentTimeMillis()-blink) < 1000 && !(emergency && (System.currentTimeMillis()-blink) < 300))
 					continue;
 
 				blink = System.currentTimeMillis();
 
+				
 				msg_timesync sync_s = new msg_timesync(255,1);
 				sync_s.tc1 = 0;
 				sync_s.ts1 = System.currentTimeMillis()*1000L;
@@ -527,13 +530,17 @@ public class StartUp implements Runnable {
 					continue;
 
 				if(model.sys.isStatus(Status.MSP_ACTIVE)) {
-					if(model.sys.bat_state > 1)
+					if(model.sys.bat_state > 1 || hw.getBatteryTemperature() > 45 ) {
 						UpLEDControl.flash("red", 100);
+						emergency = true;
+					}
 					else
 						UpLEDControl.flash("green", 10);
 				}
 				else
-					UpLEDControl.flash("red", 500);
+					UpLEDControl.flash("red", 10);
+				
+				
 
 			} catch (Exception e) {
 				e.printStackTrace();
