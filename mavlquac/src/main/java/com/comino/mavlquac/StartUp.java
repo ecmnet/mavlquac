@@ -116,8 +116,6 @@ public class StartUp implements Runnable {
 
 	private final HardwareAbstraction hw = HardwareAbstraction.instance();
 
-	private Scanner scanner = new Scanner( System. in);
-
 
 	public StartUp(String[] args) {
 
@@ -166,11 +164,11 @@ public class StartUp implements Runnable {
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
 			System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
-			try {
-				Thread.sleep(5000);
-			} catch (InterruptedException e1) {
-				e1.printStackTrace();
-			}
+//			try {
+//				Thread.sleep(1000);
+//			} catch (InterruptedException e1) {
+//				e1.printStackTrace();
+//			}
 
 			break;
 
@@ -252,12 +250,19 @@ public class StartUp implements Runnable {
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
+				
 				if(vision!=null)
 					vision.stop();
 				if(pose!=null)
 					pose.stop();
 				if(depth!=null)
 					depth.stop();
+				
+//				try { Thread.sleep(500); } catch (InterruptedException e1) { }
+//				
+//				isRunning = false;
+				
+
 			}
 		});
 
@@ -265,10 +270,7 @@ public class StartUp implements Runnable {
 
 		logger.writeLocalMsg("MAVProxy "+config.getVersion()+" loaded");
 		//if(!is_simulation) {
-		Thread worker = new Thread(this);
-		worker.setPriority(Thread.MIN_PRIORITY);
-		worker.setName("Main");
-		worker.start();
+		
 		//	}
 
 
@@ -357,10 +359,9 @@ public class StartUp implements Runnable {
 				msg_msp_command cmd = (msg_msp_command)o;
 				switch(cmd.command) {
 				case MSP_CMD.SELECT_VIDEO_STREAM:
-
 					switch((int)cmd.param1) {
 					case 1:
-						if(pose!=null)  pose.enableStream(true);
+						if(pose!=null)  pose.enableStream(true);  
 						if(depth!=null) depth.enableStream(false);
 						break;
 					case 0:
@@ -386,6 +387,11 @@ public class StartUp implements Runnable {
 			// TODO: Eventually Emergency Off if altitude < 1m
 			// or other action to recover
 		});
+		
+		Thread worker = new Thread(this);
+		worker.setPriority(Thread.MIN_PRIORITY);
+		worker.setName("Main");
+		worker.start();
 
 
 		this.publish_microslam = config.getBoolProperty("slam_publish_microslam", "true");
@@ -520,10 +526,10 @@ public class StartUp implements Runnable {
 				blink = System.currentTimeMillis();
 
 				
-				msg_timesync sync_s = new msg_timesync(255,1);
-				sync_s.tc1 = 0;
-				sync_s.ts1 = System.currentTimeMillis()*1000L;
-				control.sendMAVLinkMessage(sync_s);
+//				msg_timesync sync_s = new msg_timesync(255,1);
+//				sync_s.tc1 = 0;
+//				sync_s.ts1 = System.currentTimeMillis()*1000L;
+//				control.sendMAVLinkMessage(sync_s);
 
 
 				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
@@ -547,6 +553,7 @@ public class StartUp implements Runnable {
 				control.close();
 			}
 		}
+		control.close();
 	}
 }
 
