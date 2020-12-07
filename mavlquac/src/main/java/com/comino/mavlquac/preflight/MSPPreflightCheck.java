@@ -88,7 +88,7 @@ public class MSPPreflightCheck {
 
         // Is LPOS available
         if(!model.sys.isStatus(Status.MSP_LPOS_VALID))
-     		checkFailed("[msp] LPOS not available", FAILED);
+     		checkFailed("[msp] LPOS not available", WARN);
 
         // Is GPOS available
         if(!model.sys.isStatus(Status.MSP_GPOS_VALID))
