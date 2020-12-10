@@ -139,7 +139,7 @@ public class StartUp implements Runnable {
 
 		//	try { redirectConsole(); } catch (IOException e2) { }
 
-		BoofConcurrency.setMaxThreads(2);
+		BoofConcurrency.setMaxThreads(4);
 
 		ExecutorService.create();
 
