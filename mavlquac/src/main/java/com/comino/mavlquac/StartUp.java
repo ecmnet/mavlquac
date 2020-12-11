@@ -71,6 +71,7 @@ import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
+import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavlquac.simulation.RangeFinder;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
@@ -438,6 +439,8 @@ public class StartUp implements Runnable {
 		int pack_count;
 
 		final DataModel model = control.getCurrentModel();
+		
+		final MSPInflightCheck inflightCheck = new MSPInflightCheck(control, hw);
 
 		final msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
 		final msg_msp_status msg = new msg_msp_status(2,1);
@@ -534,17 +537,19 @@ public class StartUp implements Runnable {
 
 				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
 					continue;
+				
 
 				if(model.sys.isStatus(Status.MSP_ACTIVE)) {
-					if(model.sys.bat_state > 1 || hw.getBatteryTemperature() > 45 ) {
-						UpLEDControl.flash("red", 100);
-						emergency = true;
-					}
+					
+					emergency = inflightCheck.performChecks();
+					if(emergency)
+						UpLEDControl.flash("red", 50);
 					else
 						UpLEDControl.flash("green", 10);
+					
 				}
 				else
-					UpLEDControl.flash("red", 10);
+					UpLEDControl.flash("yellow", 10);
 				
 				
 
