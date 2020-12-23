@@ -455,7 +455,7 @@ public class StartUp implements Runnable {
 							grid.cx  = model.grid.getIndicatorX();
 							grid.cy  = model.grid.getIndicatorY();
 							grid.cz  = model.grid.getIndicatorZ();
-							grid.tms = model.sys.getSynchronizedPX4Time_us();
+							grid.tms = DataModel.getSynchronizedPX4Time_us();
 							grid.count = model.grid.count;
 							control.sendMAVLinkMessage(grid);
 						}
