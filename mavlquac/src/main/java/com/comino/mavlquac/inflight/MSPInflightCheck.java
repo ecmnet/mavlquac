@@ -5,18 +5,22 @@ import org.mavlink.messages.MAV_SEVERITY;
 import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.LogMessage;
+import com.comino.mavcom.model.segment.Status;
 import com.comino.mavutils.hw.HardwareAbstraction;
 
 
 public class MSPInflightCheck {
 	
-	private static MSPInflightCheck instance;
+	public static final int        OK   = 0;
+	public static final int        WARN = 1;
+	public static final int   EMERGENCY = 2;
+	
 	private IMAVMSPController control = null;
 
 	private final DataModel model;
 	private final HardwareAbstraction hw;
 	
-	private int   warnLevel = 0;
+	private int   warnLevel = Integer.MAX_VALUE;
 	
 	private long  lastMessage_tms = 0;
 
@@ -24,18 +28,21 @@ public class MSPInflightCheck {
 		this.control  = control;
 		this.model    = control.getCurrentModel();
 		this.hw       = hw;
-		
 		reset();
-
 	}
 	
-	public boolean performChecks() {
+	public int performChecks() {
+		
+		if(!model.sys.isStatus(Status.MSP_ARMED)) {
+			reset();
+			return OK;
+		}
 		
 		if(model.sys.bat_state > 1)
 			notifyCheck("PX4 battery warning.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
 		
 		if(hw.getBatteryTemperature() > 45.0f)
-			notifyCheck("MSP battery warning: Temerature too high.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
+			notifyCheck("MSP battery warning: Temperature too high.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
 		
 		if(model.battery.b0 < 13.0f)
 			notifyCheck("MSP battery warning: Voltage low.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
@@ -43,13 +50,28 @@ public class MSPInflightCheck {
 		if(model.battery.b0 < 12.5f)
 			notifyCheck("MSP battery warning: Voltage critical low.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
 		
-		return warnLevel < MAV_SEVERITY.MAV_SEVERITY_WARNING;
+		
+		if(!model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY))
+			notifyCheck(null, MAV_SEVERITY.MAV_SEVERITY_WARNING);
+		
+		if(!model.sys.isSensorAvailable(Status.MSP_LIDAR_AVAILABILITY))
+			notifyCheck(null, MAV_SEVERITY.MAV_SEVERITY_WARNING);
+		
+		// Todo: Register actions and executes them
+		
+		if(warnLevel <=  MAV_SEVERITY.MAV_SEVERITY_CRITICAL)
+			return EMERGENCY;
+		if(warnLevel <=  MAV_SEVERITY.MAV_SEVERITY_WARNING)
+			return WARN;
+		return OK;
 	}
 	
 	private void notifyCheck(String message, int level) {
 		if(level < warnLevel) warnLevel = level;
-		if((System.currentTimeMillis() - lastMessage_tms) > 2000)
-			control.writeLogMessage(new LogMessage(message,level));		
+		if((System.currentTimeMillis() - lastMessage_tms) > 2000 && message != null) {
+			lastMessage_tms = System.currentTimeMillis();
+			control.writeLogMessage(new LogMessage(message,level));	
+		}
 	}
 	
 	public void reset() {

@@ -33,31 +33,18 @@
 
 package com.comino.mavlquac;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import java.util.Scanner;
 import java.util.TimeZone;
 
 import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
-import org.mavlink.messages.MAV_BATTERY_CHARGE_STATE;
 import org.mavlink.messages.MAV_CMD;
-import org.mavlink.messages.MAV_COMPONENT;
-import org.mavlink.messages.MAV_MODE_FLAG;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
-import org.mavlink.messages.lquac.msg_heartbeat;
 import org.mavlink.messages.lquac.msg_msp_command;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_status;
-import org.mavlink.messages.lquac.msg_system_time;
-import org.mavlink.messages.lquac.msg_timesync;
 
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.control.IMAVMSPController;
@@ -65,7 +52,6 @@ import com.comino.mavcom.control.impl.MAVController;
 import com.comino.mavcom.control.impl.MAVProxyController;
 import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.mavlink.IMAVLinkListener;
-import com.comino.mavcom.mavlink.MAV_CUST_MODE;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
@@ -434,7 +420,7 @@ public class StartUp implements Runnable {
 		long blink = tms;
 		boolean shell_commands = false; 
 		
-		boolean emergency = false;
+		int inflightWarnLevel = 0;
 
 		int pack_count;
 
@@ -523,7 +509,7 @@ public class StartUp implements Runnable {
 				msg.unix_time_us = System.currentTimeMillis() * 1000;
 				control.sendMAVLinkMessage(msg);
 
-				if((System.currentTimeMillis()-blink) < 1000 && !(emergency && (System.currentTimeMillis()-blink) < 300))
+				if((System.currentTimeMillis()-blink) < 1000 && !(inflightWarnLevel != MSPInflightCheck.OK && (System.currentTimeMillis()-blink) < 300))
 					continue;
 
 				blink = System.currentTimeMillis();
@@ -541,11 +527,17 @@ public class StartUp implements Runnable {
 
 				if(model.sys.isStatus(Status.MSP_ACTIVE)) {
 					
-					emergency = inflightCheck.performChecks();
-					if(emergency)
+					inflightWarnLevel = inflightCheck.performChecks();
+					switch(inflightWarnLevel) {
+					case MSPInflightCheck.EMERGENCY:
 						UpLEDControl.flash("red", 50);
-					else
+						break;
+					case MSPInflightCheck.WARN:
+						UpLEDControl.flash("yellow", 50);
+						break;
+					default:
 						UpLEDControl.flash("green", 10);
+					}
 					
 				}
 				else
