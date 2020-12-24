@@ -64,6 +64,7 @@ import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
+import com.comino.mavodometry.video.impl.SimulationOverlayListener;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.hw.upboard.UpLEDControl;
 import com.comino.mavutils.legacy.ExecutorService;
@@ -332,6 +333,10 @@ public class StartUp implements Runnable {
 				server.createContext("/mjpeg", streamer);
 				server.setExecutor(ExecutorService.get()); // creates a default executor
 				server.start();
+				
+				if(control.isSimulation()) {
+					streamer.registerOverlayListener(new SimulationOverlayListener(WIDTH,HEIGHT,model));
+				}
 
 			} catch(Exception e) { System.out.println("! No vision stream available"); }
 
