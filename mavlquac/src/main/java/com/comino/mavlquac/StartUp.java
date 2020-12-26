@@ -76,8 +76,8 @@ import boofcv.struct.image.Planar;
 
 public class StartUp implements Runnable {
 
-	private static final int WIDTH  = 320;
-	private static final int HEIGHT = 240;
+	private static final int WIDTH  = 400;
+	private static final int HEIGHT = 400;
 
 
 	IMAVMSPController    control = null;
