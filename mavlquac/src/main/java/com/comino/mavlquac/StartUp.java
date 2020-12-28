@@ -63,8 +63,8 @@ import com.comino.mavlquac.simulation.RangeFinder;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
+import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
-import com.comino.mavodometry.video.impl.SimulationOverlayListener;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.hw.upboard.UpLEDControl;
 import com.comino.mavutils.legacy.ExecutorService;
@@ -152,11 +152,11 @@ public class StartUp implements Runnable {
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
 			System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
-//			try {
-//				Thread.sleep(1000);
-//			} catch (InterruptedException e1) {
-//				e1.printStackTrace();
-//			}
+			//			try {
+			//				Thread.sleep(1000);
+			//			} catch (InterruptedException e1) {
+			//				e1.printStackTrace();
+			//			}
 
 			break;
 
@@ -238,18 +238,18 @@ public class StartUp implements Runnable {
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
-				
+
 				if(vision!=null)
 					vision.stop();
 				if(pose!=null)
 					pose.stop();
 				if(depth!=null)
 					depth.stop();
-				
-//				try { Thread.sleep(500); } catch (InterruptedException e1) { }
-//				
-//				isRunning = false;
-				
+
+				//				try { Thread.sleep(500); } catch (InterruptedException e1) { }
+				//				
+				//				isRunning = false;
+
 
 			}
 		});
@@ -258,7 +258,7 @@ public class StartUp implements Runnable {
 
 		logger.writeLocalMsg("MAVProxy "+config.getVersion()+" loaded");
 		//if(!is_simulation) {
-		
+
 		//	}
 
 
@@ -333,10 +333,8 @@ public class StartUp implements Runnable {
 				server.createContext("/mjpeg", streamer);
 				server.setExecutor(ExecutorService.get()); // creates a default executor
 				server.start();
-				
-				if(control.isSimulation()) {
-					streamer.registerOverlayListener(new SimulationOverlayListener(WIDTH,HEIGHT,model));
-				}
+
+				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
 
 			} catch(Exception e) { System.out.println("! No vision stream available"); }
 
@@ -379,7 +377,7 @@ public class StartUp implements Runnable {
 			// TODO: Eventually Emergency Off if altitude < 1m
 			// or other action to recover
 		});
-		
+
 		Thread worker = new Thread(this);
 		worker.setPriority(Thread.MIN_PRIORITY);
 		worker.setName("Main");
@@ -393,25 +391,25 @@ public class StartUp implements Runnable {
 
 	}
 
-//	private void processConsoleCommands(String s) {
-//		if(s.toLowerCase().contains("arm")) {
-//			if(!model.sys.isStatus(Status.MSP_ARMED)) {
-//				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,1 );
-//				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_DO_SET_MODE,
-//						MAV_MODE_FLAG.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED | MAV_MODE_FLAG.MAV_MODE_FLAG_SAFETY_ARMED,
-//						MAV_CUST_MODE.PX4_CUSTOM_MAIN_MODE_MANUAL, 0 );
-//			}
-//		} else if(s.toLowerCase().contains("takeoff")) {
-//			commander.getAutopilot().countDownAndTakeoff(3, true);
-//		} else if(s.toLowerCase().contains("land")) {
-//			control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_NAV_LAND, 0, 2, 0, 0 );
-//		} else if(s.toLowerCase().contains("status")) {
-//			
-//		} else {
-//			System.out.println("Unknown command");
-//		}
-//
-//	}
+	//	private void processConsoleCommands(String s) {
+	//		if(s.toLowerCase().contains("arm")) {
+	//			if(!model.sys.isStatus(Status.MSP_ARMED)) {
+	//				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,1 );
+	//				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_DO_SET_MODE,
+	//						MAV_MODE_FLAG.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED | MAV_MODE_FLAG.MAV_MODE_FLAG_SAFETY_ARMED,
+	//						MAV_CUST_MODE.PX4_CUSTOM_MAIN_MODE_MANUAL, 0 );
+	//			}
+	//		} else if(s.toLowerCase().contains("takeoff")) {
+	//			commander.getAutopilot().countDownAndTakeoff(3, true);
+	//		} else if(s.toLowerCase().contains("land")) {
+	//			control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_NAV_LAND, 0, 2, 0, 0 );
+	//		} else if(s.toLowerCase().contains("status")) {
+	//			
+	//		} else {
+	//			System.out.println("Unknown command");
+	//		}
+	//
+	//	}
 
 	public static void main(String[] args)  {
 
@@ -424,13 +422,13 @@ public class StartUp implements Runnable {
 		long tms = System.currentTimeMillis();
 		long blink = tms;
 		boolean shell_commands = false; 
-		
+
 		int inflightWarnLevel = 0;
 
 		int pack_count;
 
 		final DataModel model = control.getCurrentModel();
-		
+
 		final MSPInflightCheck inflightCheck = new MSPInflightCheck(control, hw);
 
 		final msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
@@ -519,19 +517,19 @@ public class StartUp implements Runnable {
 
 				blink = System.currentTimeMillis();
 
-				
-//				msg_timesync sync_s = new msg_timesync(255,1);
-//				sync_s.tc1 = 0;
-//				sync_s.ts1 = System.currentTimeMillis()*1000L;
-//				control.sendMAVLinkMessage(sync_s);
+
+				//				msg_timesync sync_s = new msg_timesync(255,1);
+				//				sync_s.tc1 = 0;
+				//				sync_s.ts1 = System.currentTimeMillis()*1000L;
+				//				control.sendMAVLinkMessage(sync_s);
 
 
 				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
 					continue;
-				
+
 
 				if(model.sys.isStatus(Status.MSP_ACTIVE)) {
-					
+
 					inflightWarnLevel = inflightCheck.performChecks();
 					switch(inflightWarnLevel) {
 					case MSPInflightCheck.EMERGENCY:
@@ -543,12 +541,12 @@ public class StartUp implements Runnable {
 					default:
 						UpLEDControl.flash("green", 10);
 					}
-					
+
 				}
 				else
 					UpLEDControl.flash("yellow", 10);
-				
-				
+
+
 
 			} catch (Exception e) {
 				e.printStackTrace();
