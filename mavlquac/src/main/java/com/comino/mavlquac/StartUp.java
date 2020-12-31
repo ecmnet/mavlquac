@@ -194,7 +194,7 @@ public class StartUp implements Runnable {
 				msg_msp_command cmd = (msg_msp_command)o;
 				switch(cmd.command) {
 				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
-					model.grid.invalidateTransfer();
+					commander.getMap().init();
 					break;
 				}
 			}
@@ -450,8 +450,8 @@ public class StartUp implements Runnable {
 				pack_count = 0; publish_microslam = true;
 
 
-				if(model.grid.count > 3) {
-					while(publish_microslam && model.grid.hasTransfers() && pack_count++ < 10) {
+				if(model.grid.hasTransfers()) {
+					while(publish_microslam  && pack_count++ < 50) {
 						if(model.grid.toArray(grid.data)) {
 							grid.resolution = 0.05f;
 							grid.extension  = model.grid.getExtension();
