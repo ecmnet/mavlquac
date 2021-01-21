@@ -194,7 +194,7 @@ public class StartUp implements Runnable {
 				msg_msp_command cmd = (msg_msp_command)o;
 				switch(cmd.command) {
 				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
-					commander.getMap().init();
+					commander.getAutopilot().invalidate_map_transfer();
 					break;
 				}
 			}
@@ -312,7 +312,7 @@ public class StartUp implements Runnable {
 
 			try {
 
-				depth = new MAVR200DepthEstimator(control, commander.getAutopilot(), config, WIDTH,HEIGHT, commander.getMap(), streamer);
+				depth = new MAVR200DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
 				depth.enableStream(true);
 				depth.start();
 
@@ -453,11 +453,9 @@ public class StartUp implements Runnable {
 				if(model.grid.hasTransfers()) {
 					while(publish_microslam  && pack_count++ < 50) {
 						if(model.grid.toArray(grid.data)) {
-							grid.resolution = 0.05f;
-							grid.extension  = model.grid.getExtension();
-							grid.cx  = model.grid.getIndicatorX();
-							grid.cy  = model.grid.getIndicatorY();
-							grid.cz  = model.grid.getIndicatorZ();
+							grid.cx  = model.grid.ix;
+							grid.cy  = model.grid.iy;
+							grid.cz  = model.grid.iz;
 							grid.tms = DataModel.getSynchronizedPX4Time_us();
 							grid.count = model.grid.count;
 							control.sendMAVLinkMessage(grid);
