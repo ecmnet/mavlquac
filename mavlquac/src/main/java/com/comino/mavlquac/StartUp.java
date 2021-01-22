@@ -76,8 +76,8 @@ import boofcv.struct.image.Planar;
 
 public class StartUp implements Runnable {
 
-	private static final int WIDTH  = 400;
-	private static final int HEIGHT = 400;
+	private static final int WIDTH  = 320;
+	private static final int HEIGHT = 240;
 
 
 	IMAVMSPController    control = null;
@@ -425,8 +425,6 @@ public class StartUp implements Runnable {
 
 		int inflightWarnLevel = 0;
 
-		int pack_count;
-
 		final DataModel model = control.getCurrentModel();
 
 		final MSPInflightCheck inflightCheck = new MSPInflightCheck(control, hw);
@@ -447,11 +445,10 @@ public class StartUp implements Runnable {
 					continue;
 				}
 
-				pack_count = 0; publish_microslam = true;
-
+				publish_microslam = true;
 
 				if(model.grid.hasTransfers()) {
-					while(publish_microslam  && pack_count++ < 50) {
+					if(publish_microslam) {
 						if(model.grid.toArray(grid.data)) {
 							grid.cx  = model.grid.ix;
 							grid.cy  = model.grid.iy;
@@ -465,7 +462,7 @@ public class StartUp implements Runnable {
 
 				//     streamer.addToStream(Autopilot2D.getInstance().getMap2D().getMap().subimage(400-160, 400-120, 400+160, 400+120), model, System.currentTimeMillis()*1000);
 
-				Thread.sleep(50);
+				Thread.sleep(10);
 
 				if((System.currentTimeMillis()-tms) < 200 )
 					continue;
