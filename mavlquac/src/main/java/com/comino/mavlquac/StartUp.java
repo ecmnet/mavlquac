@@ -42,6 +42,7 @@ import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
 import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
+import org.mavlink.messages.lquac.msg_debug_vect;
 import org.mavlink.messages.lquac.msg_msp_command;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_status;
@@ -59,7 +60,7 @@ import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
-import com.comino.mavlquac.simulation.RangeFinder;
+import com.comino.mavlquac.simulation.SensorSimulation;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
@@ -267,7 +268,7 @@ public class StartUp implements Runnable {
 		try {	Thread.sleep(200); } catch(Exception e) { }
 
 		if(control.isSimulation()) {
-			new RangeFinder(control);
+		//	new SensorSimulation(control);
 		}
 
 		if(config.getBoolProperty("vision_enabled", "true")) {
@@ -430,7 +431,8 @@ public class StartUp implements Runnable {
 		final MSPInflightCheck inflightCheck = new MSPInflightCheck(control, hw);
 
 		final msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
-		final msg_msp_status msg = new msg_msp_status(2,1);
+		final msg_msp_status msg      = new msg_msp_status(2,1);
+		final msg_debug_vect debug    = new msg_debug_vect(2,1);
 
 		if(hw.getArchId() == HardwareAbstraction.UPBOARD)
 			UpLEDControl.clear();
@@ -446,7 +448,8 @@ public class StartUp implements Runnable {
 				}
 
 				publish_microslam = true;
-
+				
+				// Publish grid
 				if(model.grid.hasTransfers()) {
 					if(publish_microslam) {
 						if(model.grid.toArray(grid.data)) {
@@ -458,8 +461,14 @@ public class StartUp implements Runnable {
 							control.sendMAVLinkMessage(grid);
 						}
 					}
-				}
-
+				} 
+				
+				// publish debug vector
+				debug.x = model.debug.x;
+				debug.y = model.debug.y;
+				debug.z = model.debug.z;
+				control.sendMAVLinkMessage(debug);
+				
 				//     streamer.addToStream(Autopilot2D.getInstance().getMap2D().getMap().subimage(400-160, 400-120, 400+160, 400+120), model, System.currentTimeMillis()*1000);
 
 				Thread.sleep(10);
@@ -475,7 +484,7 @@ public class StartUp implements Runnable {
 					if(!shell_commands ) {
 						//control.sendShellCommand("dshot beep4");
 						control.sendShellCommand("sf1xx start -X");
-						control.sendShellCommand("rm3100 start");
+//						control.sendShellCommand("rm3100 start");
 
 						// enforce NUTTX RTC set to companion time
 						SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY");   
