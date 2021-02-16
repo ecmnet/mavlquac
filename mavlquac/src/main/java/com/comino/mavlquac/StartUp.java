@@ -58,6 +58,7 @@ import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
+import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavlquac.simulation.SensorSimulation;
@@ -81,8 +82,9 @@ public class StartUp implements Runnable {
 	private static final int HEIGHT = 240;
 
 
-	IMAVMSPController    control = null;
-	MSPConfig	          config  = null;
+	IMAVMSPController    control    = null;
+	MSPConfig	          config    = null;
+	MAVLinkDispatcher    dispatcher = null;
 
 	private HttpMJPEGHandler<Planar<GrayU8>> streamer = null;
 
@@ -94,8 +96,7 @@ public class StartUp implements Runnable {
 	private MAVR200PositionEstimator vision = null;
 	private MAVT265PositionEstimator pose = null;
 	private MAVR200DepthEstimator depth = null;
-
-	private boolean publish_microslam;
+	
 	private int mode;
 
 	private MSPLogger logger;
@@ -176,6 +177,7 @@ public class StartUp implements Runnable {
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
 
+		dispatcher = new MAVLinkDispatcher(control, config, hw);
 
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
@@ -385,9 +387,6 @@ public class StartUp implements Runnable {
 		worker.start();
 
 
-		this.publish_microslam = config.getBoolProperty("slam_publish_microslam", "true");
-		System.out.println("[vis] Publishing microSlam enabled: "+publish_microslam);
-
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
 	}
@@ -429,10 +428,7 @@ public class StartUp implements Runnable {
 		final DataModel model = control.getCurrentModel();
 
 		final MSPInflightCheck inflightCheck = new MSPInflightCheck(control, hw);
-
-		final msg_msp_micro_grid grid = new msg_msp_micro_grid(2,1);
-		final msg_msp_status msg      = new msg_msp_status(2,1);
-		final msg_debug_vect debug    = new msg_debug_vect(2,1);
+		
 
 		if(hw.getArchId() == HardwareAbstraction.UPBOARD)
 			UpLEDControl.clear();
@@ -447,27 +443,8 @@ public class StartUp implements Runnable {
 					continue;
 				}
 
-				publish_microslam = true;
-				
-				// Publish grid
-				if(model.grid.hasTransfers()) {
-					if(publish_microslam) {
-						if(model.grid.toArray(grid.data)) {
-							grid.cx  = model.grid.ix;
-							grid.cy  = model.grid.iy;
-							grid.cz  = model.grid.iz;
-							grid.tms = DataModel.getSynchronizedPX4Time_us();
-							grid.count = model.grid.count;
-							control.sendMAVLinkMessage(grid);
-						}
-					}
-				} 
-				
-				// publish debug vector
-				debug.x = model.debug.x;
-				debug.y = model.debug.y;
-				debug.z = model.debug.z;
-				control.sendMAVLinkMessage(debug);
+				// Dispatch messages to GCL
+				dispatcher.dispatch(System.currentTimeMillis());
 				
 				//     streamer.addToStream(Autopilot2D.getInstance().getMap2D().getMap().subimage(400-160, 400-120, 400+160, 400+120), model, System.currentTimeMillis()*1000);
 
@@ -499,22 +476,9 @@ public class StartUp implements Runnable {
 				}
 
 				hw.update();
-
-				msg.load = hw.getCPULoad();
-				msg.memory = hw.getMemoryUsage();
-				msg.wifi_quality = hw.getWifiQuality();
-				msg.threads = Thread.activeCount();
-				msg.cpu_temp = (byte)hw.getCPUTemperature();
-				msg.bat_temp = (byte)hw.getBatteryTemperature();
-				msg.com_error = control.getErrorCount();
-				msg.takeoff_ms = commander.getTimeSinceTakeoff();
-				msg.autopilot_mode =control.getCurrentModel().sys.autopilot;
-				msg.uptime_ms = System.currentTimeMillis() - startTime_ms;
-				msg.status = control.getCurrentModel().sys.getStatus();
-				msg.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
-				msg.setArch(hw.getArchName());
-				msg.unix_time_us = System.currentTimeMillis() * 1000;
-				control.sendMAVLinkMessage(msg);
+				
+				model.sys.t_takeoff_ms = commander.getTimeSinceTakeoff();
+				
 
 				if((System.currentTimeMillis()-blink) < 1000 && !(inflightWarnLevel != MSPInflightCheck.OK && (System.currentTimeMillis()-blink) < 300))
 					continue;
