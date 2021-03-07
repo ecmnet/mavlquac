@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020 Eike Mansfeld ecm@gmx.de. All rights reserved.
+ *   Copyright (c) 2021 Eike Mansfeld ecm@gmx.de. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,8 +90,6 @@ public class StartUp implements Runnable {
 
 	private MSPCommander  commander = null;
 	private DataModel     model     = null;
-
-	private final long startTime_ms = System.currentTimeMillis();
 
 	private MAVR200PositionEstimator vision = null;
 	private MAVT265PositionEstimator pose = null;
@@ -504,7 +502,10 @@ public class StartUp implements Runnable {
 						UpLEDControl.flash("red", 50);
 						break;
 					case MSPInflightCheck.WARN:
-						UpLEDControl.flash("yellow", 50);
+						UpLEDControl.flash("yellow", 10);
+						break;
+					case MSPInflightCheck.INIT:
+						UpLEDControl.flash("yellow", 30);
 						break;
 					default:
 						UpLEDControl.flash("green", 10);

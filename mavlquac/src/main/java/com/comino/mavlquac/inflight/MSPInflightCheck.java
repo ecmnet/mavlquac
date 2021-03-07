@@ -14,6 +14,7 @@ public class MSPInflightCheck {
 	public static final int        OK   = 0;
 	public static final int        WARN = 1;
 	public static final int   EMERGENCY = 2;
+	public static final int        INIT = 9;
 	
 	private IMAVMSPController control = null;
 
@@ -33,6 +34,12 @@ public class MSPInflightCheck {
 	
 	public int performChecks() {
 		
+		// Set to init phase until CV is initialized the first time
+		if(model.sys.t_boot_ms < 20000 && !model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
+			reset();
+			return INIT;
+		}
+		
 		if(!model.sys.isStatus(Status.MSP_ARMED)) {
 			reset();
 			return OK;
@@ -44,14 +51,14 @@ public class MSPInflightCheck {
 		if(hw.getBatteryTemperature() > 45.0f)
 			notifyCheck("MSP battery warning: Temperature too high.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
 		
-		if(model.battery.b0 < 13.0f)
+		if(model.battery.b0 < 12.3f)
 			notifyCheck("MSP battery warning: Voltage low.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
 		
-		if(model.battery.b0 < 12.5f)
+		if(model.battery.b0 < 12.0f)
 			notifyCheck("MSP battery warning: Voltage critical low.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
 		
 		
-		if(!model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY))
+		if(!model.sys.isSensorAvailable(Status.MSP_PIX4FLOW_AVAILABILITY))
 			notifyCheck(null, MAV_SEVERITY.MAV_SEVERITY_WARNING);
 		
 		if(!model.sys.isSensorAvailable(Status.MSP_LIDAR_AVAILABILITY))

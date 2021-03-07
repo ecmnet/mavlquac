@@ -82,9 +82,12 @@ public class MSPPreflightCheck {
 			checkFailed("[msp] No GPS fix available ", INFO);
 
         // Is Vision available ?
-        if(!model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY))
-			checkFailed("[msp] No vision data available ", WARN);
-
+        if(!model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
+        	if(control.isSimulation())
+			  checkFailed("[msp] No odometry available ", WARN);
+        	else
+        	  checkFailed("[msp] No odometry available ", FAILED);
+        }
 
         // Is LPOS available
         if(!model.sys.isStatus(Status.MSP_LPOS_VALID))
