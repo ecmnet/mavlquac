@@ -58,6 +58,7 @@ import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
+import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
@@ -70,13 +71,16 @@ import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.hw.upboard.UpLEDControl;
 import com.comino.mavutils.legacy.ExecutorService;
+import com.comino.mavutils.workqueue.WorkQueue;
 import com.sun.net.httpserver.HttpServer;
 
 import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
 import boofcv.struct.image.Planar;
 
-public class StartUp implements Runnable {
+public class StartUp  {
+	
+	private final WorkQueue wq = WorkQueue.getInstance();
 
 	private static final int WIDTH  = 320;
 	private static final int HEIGHT = 240;
@@ -99,15 +103,19 @@ public class StartUp implements Runnable {
 
 	private MSPLogger logger;
 	private PX4Parameters params;
+	
 
-	private boolean isRunning = true;
-
-	private final HardwareAbstraction hw = HardwareAbstraction.instance();
+	private final HardwareAbstraction hw;
+	private final MSPInflightCheck inflightCheck;
 
 
 	public StartUp(String[] args) {
 
 		//		new JetsonNanoInferenceTest();
+		
+		addShutdownHook();
+		
+		this.hw = HardwareAbstraction.instance();
 
 		Runtime.getRuntime().addShutdownHook(new Thread() 
 		{ 
@@ -115,17 +123,15 @@ public class StartUp implements Runnable {
 			{ 
 				System.out.println("MSPControlService shutdown...");
 
-				isRunning = false;
-
 				control.close();
 
 				if(pose!=null) pose.stop();
 				if(depth!=null) depth.stop();
+				
+				wq.stop();
 
 			} 
 		}); 
-
-		//	try { redirectConsole(); } catch (IOException e2) { }
 
 		BoofConcurrency.setMaxThreads(4);
 
@@ -175,11 +181,11 @@ public class StartUp implements Runnable {
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
 
-		dispatcher = new MAVLinkDispatcher(control, config, hw);
-
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
-
+		
+		inflightCheck = new MSPInflightCheck(control, hw);
+		dispatcher = new MAVLinkDispatcher(control, config, hw);
 
 		control.start();
 		model = control.getCurrentModel();
@@ -237,39 +243,14 @@ public class StartUp implements Runnable {
 				});
 
 
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-
-				if(vision!=null)
-					vision.stop();
-				if(pose!=null)
-					pose.stop();
-				if(depth!=null)
-					depth.stop();
-
-				//				try { Thread.sleep(500); } catch (InterruptedException e1) { }
-				//				
-				//				isRunning = false;
-
-
-			}
-		});
-
 
 
 		logger.writeLocalMsg("MAVProxy "+config.getVersion()+" loaded");
-		//if(!is_simulation) {
-
-		//	}
-
-
+		
 		// Start services if required
 
 		try {	Thread.sleep(200); } catch(Exception e) { }
 
-		if(control.isSimulation()) {
-		//	new SensorSimulation(control);
-		}
 
 		if(config.getBoolProperty("vision_enabled", "true")) {
 
@@ -365,164 +346,79 @@ public class StartUp implements Runnable {
 			}
 		});
 
-		// To ensure, that LIDAR is started when reboot via console
-		control.getStatusManager().addListener( Status.MSP_IMU_AVAILABILITY, (n) -> {
-			if(n.isStatus(Status.MSP_IMU_AVAILABILITY)) {
-				control.sendShellCommand("sf1xx start -X");
-				//	control.sendShellCommand("rm3100 start");
-			}
-		});
+//		// To ensure, that LIDAR is started when reboot via console
+//		control.getStatusManager().addListener( Status.MSP_IMU_AVAILABILITY, (n) -> {
+//			if(n.isStatus(Status.MSP_IMU_AVAILABILITY)) {
+//				control.sendShellCommand("sf1xx start -X");
+//				//	control.sendShellCommand("rm3100 start");
+//			}
+//		});
 
 		control.getStatusManager().addListener(StatusManager.TYPE_ESTIMATOR, ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL, StatusManager.EDGE_FALLING, (n) -> {
-			MSPLogger.getInstance().writeLocalMsg("Position estimation failure. Action required.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+			MSPLogger.getInstance().writeLocalMsg("[msp] Position estimation failure. Action required.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 			// TODO: Eventually Emergency Off if altitude < 1m
 			// or other action to recover
 		});
 
-		Thread worker = new Thread(this);
-		worker.setPriority(Thread.MIN_PRIORITY);
-		worker.setName("Main");
-		worker.start();
-
 
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
-
+		
+		// Setup WorkQueues and start them
+		
+		wq.addCyclicTask("LP", 200,  new Console());
+		wq.addCyclicTask("LP", 200,  hw);
+		wq.addCyclicTask("LP", 1000, inflightCheck);
+		wq.addCyclicTask("NP", 10,   dispatcher);
+		
+		wq.addSingleTask("LP", 500, new initPX4());
+		
+		wq.start();
+		
 	}
 
-	//	private void processConsoleCommands(String s) {
-	//		if(s.toLowerCase().contains("arm")) {
-	//			if(!model.sys.isStatus(Status.MSP_ARMED)) {
-	//				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,1 );
-	//				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_DO_SET_MODE,
-	//						MAV_MODE_FLAG.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED | MAV_MODE_FLAG.MAV_MODE_FLAG_SAFETY_ARMED,
-	//						MAV_CUST_MODE.PX4_CUSTOM_MAIN_MODE_MANUAL, 0 );
-	//			}
-	//		} else if(s.toLowerCase().contains("takeoff")) {
-	//			commander.getAutopilot().countDownAndTakeoff(3, true);
-	//		} else if(s.toLowerCase().contains("land")) {
-	//			control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_NAV_LAND, 0, 2, 0, 0 );
-	//		} else if(s.toLowerCase().contains("status")) {
-	//			
-	//		} else {
-	//			System.out.println("Unknown command");
-	//		}
-	//
-	//	}
 
 	public static void main(String[] args)  {
-
+        
 		new StartUp(args);
 
 	}
-
-	@Override
-	public void run() {
-		long tms = System.currentTimeMillis();
-		long blink = tms;
-		boolean shell_commands = false; 
-
-		int inflightWarnLevel = 0;
-
-		final DataModel model = control.getCurrentModel();
-
-		final MSPInflightCheck inflightCheck = new MSPInflightCheck(control, hw);
+	
+	private void addShutdownHook() {
 		
-
-		if(hw.getArchId() == HardwareAbstraction.UPBOARD)
-			UpLEDControl.clear();
-
-
-		while(isRunning) {
-
-			try {
-
-				if(!control.isConnected()) {
-					Thread.sleep(200);
-					continue;
-				}
-
-				// Dispatch messages to GCL
-				dispatcher.dispatch(System.currentTimeMillis());
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
 				
-				//     streamer.addToStream(Autopilot2D.getInstance().getMap2D().getMap().subimage(400-160, 400-120, 400+160, 400+120), model, System.currentTimeMillis()*1000);
+				wq.stop();
 
-				Thread.sleep(10);
-
-				if((System.currentTimeMillis()-tms) < 200 )
-					continue;
-
-				tms = System.currentTimeMillis();
-
-
-				if(mode==MAVController.MODE_NORMAL) {
-
-					if(!shell_commands ) {
-						//control.sendShellCommand("dshot beep4");
-						control.sendShellCommand("sf1xx start -X");
-//						control.sendShellCommand("rm3100 start");
-
-						// enforce NUTTX RTC set to companion time
-						SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY");   
-						sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-						String s = sdf.format(new Date());
-						control.sendShellCommand("date -s \""+s+"\"");
-
-						shell_commands = true;
-
-					}
-
-				}
-
-				hw.update();
-				
-				model.sys.t_takeoff_ms = commander.getTimeSinceTakeoff();
-				
-
-				if((System.currentTimeMillis()-blink) < 1000 && !(inflightWarnLevel != MSPInflightCheck.OK && (System.currentTimeMillis()-blink) < 300))
-					continue;
-
-				blink = System.currentTimeMillis();
-
-
-				//				msg_timesync sync_s = new msg_timesync(255,1);
-				//				sync_s.tc1 = 0;
-				//				sync_s.ts1 = System.currentTimeMillis()*1000L;
-				//				control.sendMAVLinkMessage(sync_s);
-
-
-				if(hw.getArchId() != HardwareAbstraction.UPBOARD)
-					continue;
-
-
-				if(model.sys.isStatus(Status.MSP_ACTIVE)) {
-
-					inflightWarnLevel = inflightCheck.performChecks();
-					switch(inflightWarnLevel) {
-					case MSPInflightCheck.EMERGENCY:
-						UpLEDControl.flash("red", 50);
-						break;
-					case MSPInflightCheck.WARN:
-						UpLEDControl.flash("yellow", 10);
-						break;
-					case MSPInflightCheck.INIT:
-						UpLEDControl.flash("yellow", 30);
-						break;
-					default:
-						UpLEDControl.flash("green", 10);
-					}
-
-				}
-				else
-					UpLEDControl.flash("yellow", 10);
-
-
-
-			} catch (Exception e) {
-				e.printStackTrace();
-				control.close();
+				if(vision!=null)
+					vision.stop();
+				if(pose!=null)
+					pose.stop();
+				if(depth!=null)
+					depth.stop();
 			}
-		}
-		control.close();
+		});
+
 	}
+	
+	private class initPX4 implements Runnable {
+
+		@Override
+		public void run() {
+			if(mode==MAVController.MODE_NORMAL && control.isConnected()) {
+				System.out.println("Execute init PX4");
+				//control.sendShellCommand("dshot beep4");
+				control.sendShellCommand("sf1xx start -X");
+	//			control.sendShellCommand("rm3100 start");
+
+				// enforce NUTTX RTC set to companion time
+				SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY");   
+				sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+				String s = sdf.format(new Date());
+				control.sendShellCommand("date -s \""+s+"\"");
+			}	
+		}	
+	}
+
 }
 
