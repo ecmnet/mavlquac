@@ -136,7 +136,7 @@ public class MAVLinkDispatcher implements Runnable {
 		}
 
 		// Publish SLAM data
-		if(publish_microslam && model.slam.quality > 0) {
+		if(publish_microslam && ( model.slam.quality > 0 || control.isSimulation())) {
 			slam.pd = model.slam.pd;
 			slam.pp = model.slam.pp;
 			slam.pv = model.slam.pv;
