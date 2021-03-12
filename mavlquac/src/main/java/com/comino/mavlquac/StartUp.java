@@ -158,12 +158,6 @@ public class StartUp  {
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
 			System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
-			//			try {
-			//				Thread.sleep(1000);
-			//			} catch (InterruptedException e1) {
-			//				e1.printStackTrace();
-			//			}
-
 			break;
 
 		case MAVController.MODE_SERVER:
@@ -193,22 +187,11 @@ public class StartUp  {
 		params = PX4Parameters.getInstance(control);
 
 		commander = new MSPCommander(control,config);
-		//	commander.getAutopilot().resetMap();
 
-		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
-			@Override
-			public void received(Object o) {
-				msg_msp_command cmd = (msg_msp_command)o;
-				switch(cmd.command) {
-				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
-					commander.getAutopilot().invalidate_map_transfer();
-					break;
-				}
-			}
-		});
-
+		
+		// Request parameter refresh when reconnected on ground
 		control.getStatusManager().addListener(Status.MSP_CONNECTED, (n) -> {
-			if(n.isStatus(Status.MSP_CONNECTED))
+			if(n.isStatus(Status.MSP_CONNECTED) && !model.sys.isStatus(Status.MSP_ARMED))
 				params.requestRefresh();
 		});
 
@@ -227,6 +210,7 @@ public class StartUp  {
 		});
 
 
+		// Preflight checks when arming
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
 				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
 					if(MSPPreflightCheck.getInstance(control).performArmCheck(params)==MSPPreflightCheck.FAILED) {
@@ -236,7 +220,7 @@ public class StartUp  {
 					} 
 				});
 
-
+		// ?????
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_SERVICES,
 				Status.MSP_SLAM_AVAILABILITY, StatusManager.EDGE_FALLING, (n) -> {
 					logger.writeLocalMsg("[msp] SLAM disabled", MAV_SEVERITY.MAV_SEVERITY_INFO);
@@ -325,11 +309,16 @@ public class StartUp  {
 
 		control.connect();
 
+		
+		// Dispatch commands
 		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
 			@Override
 			public void received(Object o) {
 				msg_msp_command cmd = (msg_msp_command)o;
 				switch(cmd.command) {
+				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
+					commander.getAutopilot().invalidate_map_transfer();
+					break;
 				case MSP_CMD.SELECT_VIDEO_STREAM:
 					switch((int)cmd.param1) {
 					case 1:
@@ -354,6 +343,7 @@ public class StartUp  {
 //			}
 //		});
 
+		// ?????
 		control.getStatusManager().addListener(StatusManager.TYPE_ESTIMATOR, ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL, StatusManager.EDGE_FALLING, (n) -> {
 			MSPLogger.getInstance().writeLocalMsg("[msp] Position estimation failure. Action required.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 			// TODO: Eventually Emergency Off if altitude < 1m
@@ -365,7 +355,7 @@ public class StartUp  {
 		
 		// Setup WorkQueues and start them
 		
-		wq.addCyclicTask("LP", 200,  new Console());
+		wq.addCyclicTask("LP", 200,  new Console(control));
 		wq.addCyclicTask("LP", 200,  hw);
 		wq.addCyclicTask("LP", 1000, inflightCheck);
 		wq.addCyclicTask("NP", 10,   dispatcher);
