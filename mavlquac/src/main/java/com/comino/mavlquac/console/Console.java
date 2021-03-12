@@ -74,19 +74,19 @@ public class Console implements Runnable {
 		}
 		
 		// Workqueue status
-		if(s.contains("msp wq")) {
+		if(s.contains("wq")) {
 			WorkQueue.getInstance().printStatus();
 			return;
 		}
 		
-		// otherwise send command as shell command
+		// otherwise execute it as OS level command
 		if(!control.getCurrentModel().sys.isStatus(Status.MSP_ARMED)) {
-			executeConsoleCommand(s);
+			executeOSCommand(s);
 		}		
 	}
 
 
-	private void executeConsoleCommand(String command) {
+	private void executeOSCommand(String command) {
 		try {
 			Process process;
 			process = Runtime.getRuntime().exec(command);
@@ -96,8 +96,8 @@ public class Console implements Runnable {
 			int exitCode = process.waitFor();
 			assert exitCode == 0;	
 		} catch (Exception e) {
-			MSPLogger.getInstance().writeLocalMsg("LINUX command '"+command+"' failed: "+e.getMessage(),
-					MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
+			MSPLogger.getInstance().writeLocalMsg("OS command '"+command+"' failed: "+e.getMessage(),
+					MAV_SEVERITY.MAV_SEVERITY_WARNING);
 		}
 	}
 
