@@ -44,13 +44,9 @@ import com.comino.mavcom.control.IMAVController;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Vision;
 import com.comino.mavutils.hw.HardwareAbstraction;
+import com.comino.mavutils.workqueue.WorkQueue;
 
-public class MAVLinkDispatcher implements Runnable {
-
-	private long last_call_10  = 0;
-	private long last_call_50  = 0;
-	private long last_call_200 = 0;
-	private long last_call_500 = 0;
+public class MAVLinkDispatcher  {
 
 	private final DataModel        model;
 	private final IMAVController control;
@@ -67,6 +63,9 @@ public class MAVLinkDispatcher implements Runnable {
 	private boolean publish_microslam;
 	private boolean publish_microgrid;
 	private boolean publish_debug;
+	
+	// Rework using WorkQueue!
+	private final WorkQueue wq = WorkQueue.getInstance();
 
 
 	public MAVLinkDispatcher(IMAVController control, MSPConfig config, HardwareAbstraction hw) {
@@ -83,104 +82,96 @@ public class MAVLinkDispatcher implements Runnable {
 
 		this.publish_debug = config.getBoolProperty("publish_debug", "true");
 		System.out.println("[vis] Publishing debug messages enabled: "+publish_debug);
+		
+		wq.addCyclicTask("NP", 10,  new Dispatch_10ms());
+		wq.addCyclicTask("NP", 50,  new Dispatch_50ms());
+		wq.addCyclicTask("NP", 200, new Dispatch_200ms());
+	//	wq.addCyclicTask("NP", 500, new Dispatch_500ms());
 	}
-
-
-	public void run() {
-
-		if((System.currentTimeMillis()-last_call_10)>10) {
-			dispatch_10ms();
-			last_call_10 = System.currentTimeMillis();
+	
+	private class Dispatch_10ms implements Runnable {
+		@Override
+		public void run() {
+			
+			// Publish grid
+			if(publish_microgrid && model.grid.hasTransfers()) {
+				if(model.grid.toArray(grid.data)) {
+					grid.cx  = model.grid.ix;
+					grid.cy  = model.grid.iy;
+					grid.cz  = model.grid.iz;
+					grid.tms = DataModel.getSynchronizedPX4Time_us();
+					grid.count = model.grid.count;
+					control.sendMAVLinkMessage(grid);
+				}
+			}
+	
 		}
-
-		if((System.currentTimeMillis()-last_call_50)>50) {
-			dispatch_50ms();
-			last_call_50 = System.currentTimeMillis();
-		}
-
-		if((System.currentTimeMillis()-last_call_200)>200) {
-			dispatch_200ms();
-			last_call_200 = System.currentTimeMillis();
-		}
-
-		if((System.currentTimeMillis()-last_call_500)>500) {
-			dispatch_500ms();
-			last_call_500 = System.currentTimeMillis();
-		}
-
 	}
+	
+	private class Dispatch_50ms implements Runnable {
+		@Override
+		public void run() {
+			
+			// Debug vector
+			if(publish_debug) {
+				debug.x = model.debug.x;
+				debug.y = model.debug.y;
+				debug.z = model.debug.z;
+				control.sendMAVLinkMessage(debug);
+			}
 
-	private void dispatch_10ms() {
-
-		// Publish grid
-		if(publish_microgrid && model.grid.hasTransfers()) {
-			if(model.grid.toArray(grid.data)) {
-				grid.cx  = model.grid.ix;
-				grid.cy  = model.grid.iy;
-				grid.cz  = model.grid.iz;
-				grid.tms = DataModel.getSynchronizedPX4Time_us();
-				grid.count = model.grid.count;
-				control.sendMAVLinkMessage(grid);
+			// Publish SLAM data
+			if(publish_microslam && ( model.slam.quality > 0 || control.isSimulation())) {
+				slam.pd = model.slam.pd;
+				slam.pp = model.slam.pp;
+				slam.pv = model.slam.pv;
+				slam.px = model.slam.px;
+				slam.py = model.slam.py;
+				slam.pz = model.slam.pz;
+				slam.md = model.slam.di;
+				slam.mw = model.slam.dw;
+				slam.dm = model.slam.dm;
+				slam.ox = model.slam.ox;
+				slam.oy = model.slam.oy;
+				slam.oz = model.slam.oz;
+				slam.quality = model.slam.quality;
+				slam.wpcount = model.slam.wpcount;
+				slam.flags = model.slam.flags;
+				slam.fps = model.slam.fps;
+				slam.tms = model.slam.tms;
+				control.sendMAVLinkMessage(slam);
 			}
 		}
 	}
-
-	private void dispatch_50ms() {
-
-		// Debug vector
-		if(publish_debug) {
-			debug.x = model.debug.x;
-			debug.y = model.debug.y;
-			debug.z = model.debug.z;
-			control.sendMAVLinkMessage(debug);
-		}
-
-		// Publish SLAM data
-		if(publish_microslam && ( model.slam.quality > 0 || control.isSimulation())) {
-			slam.pd = model.slam.pd;
-			slam.pp = model.slam.pp;
-			slam.pv = model.slam.pv;
-			slam.px = model.slam.px;
-			slam.py = model.slam.py;
-			slam.pz = model.slam.pz;
-			slam.md = model.slam.di;
-			slam.mw = model.slam.dw;
-			slam.dm = model.slam.dm;
-			slam.ox = model.slam.ox;
-			slam.oy = model.slam.oy;
-			slam.oz = model.slam.oz;
-			slam.quality = model.slam.quality;
-			slam.wpcount = model.slam.wpcount;
-			slam.flags = model.slam.flags;
-			slam.fps = model.slam.fps;
-			slam.tms = model.slam.tms;
-			control.sendMAVLinkMessage(slam);
+	
+	private class Dispatch_200ms implements Runnable {
+		@Override
+		public void run() {
+			
+			status.load = hw.getCPULoad();
+			status.memory = hw.getMemoryUsage();
+			status.wifi_quality = hw.getWifiQuality();
+			status.threads = Thread.activeCount();
+			status.cpu_temp = (byte)hw.getCPUTemperature();
+			status.bat_temp = (byte)hw.getBatteryTemperature();
+			status.com_error = control.getErrorCount();
+			status.takeoff_ms = model.sys.t_takeoff_ms;
+			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
+			status.uptime_ms = model.sys.t_boot_ms;
+			status.status = control.getCurrentModel().sys.getStatus();
+			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
+			status.setArch(hw.getArchName());
+			status.unix_time_us = System.currentTimeMillis() * 1000;
+			control.sendMAVLinkMessage(status);
 		}
 	}
-
-
-	private void dispatch_200ms() {
-
-		status.load = hw.getCPULoad();
-		status.memory = hw.getMemoryUsage();
-		status.wifi_quality = hw.getWifiQuality();
-		status.threads = Thread.activeCount();
-		status.cpu_temp = (byte)hw.getCPUTemperature();
-		status.bat_temp = (byte)hw.getBatteryTemperature();
-		status.com_error = control.getErrorCount();
-		status.takeoff_ms = model.sys.t_takeoff_ms;
-		status.autopilot_mode =control.getCurrentModel().sys.autopilot;
-		status.uptime_ms = model.sys.t_boot_ms;
-		status.status = control.getCurrentModel().sys.getStatus();
-		status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
-		status.setArch(hw.getArchName());
-		status.unix_time_us = System.currentTimeMillis() * 1000;
-		control.sendMAVLinkMessage(status);
-
-	}
-
-	private void dispatch_500ms() {
-
+	
+	private class Dispatch_500ms implements Runnable {
+		@Override
+		public void run() {
+			
+		}
+		
 	}
 
 }

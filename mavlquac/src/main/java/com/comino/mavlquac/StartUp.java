@@ -353,7 +353,6 @@ public class StartUp  {
 		wq.addCyclicTask("LP", 200,  new Console(control));
 		wq.addCyclicTask("LP", 200,  hw);
 		wq.addCyclicTask("LP", 1000, inflightCheck);
-		wq.addCyclicTask("NP", 10,   dispatcher);
 		
 		wq.addSingleTask("LP", 500, new initPX4());
 		
