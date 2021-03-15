@@ -73,6 +73,11 @@ public class Console implements Runnable {
 			return;
 		}
 		
+		if(s.contains("stop")) {
+			System.exit(-1);
+			return;
+		}
+		
 		// Workqueue status
 		if(s.contains("wq")) {
 			WorkQueue.getInstance().printStatus();
