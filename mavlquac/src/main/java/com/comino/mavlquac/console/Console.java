@@ -37,6 +37,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Scanner;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
@@ -52,14 +53,15 @@ public class Console implements Runnable {
 
 
 	private final IMAVController control;
+	private final BufferedReader br;
 
 	public Console(IMAVController control) {
 		this.control = control;	
+		this.br = new BufferedReader(new InputStreamReader(System.in));
 	}
 
 	@Override
 	public void run() {
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		try {
 			if(br.ready()) {
 				parseConsole(br.readLine().trim().toLowerCase());
