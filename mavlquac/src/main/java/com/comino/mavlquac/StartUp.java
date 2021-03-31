@@ -39,9 +39,12 @@ import java.util.Date;
 import java.util.TimeZone;
 
 import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
+import org.mavlink.messages.IMAVLinkMessageID;
 import org.mavlink.messages.MAV_CMD;
+import org.mavlink.messages.MAV_RESULT;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
+import org.mavlink.messages.lquac.msg_adsb_vehicle;
 import org.mavlink.messages.lquac.msg_msp_command;
 
 import com.comino.mavcom.config.MSPConfig;
@@ -116,14 +119,13 @@ public class StartUp  {
 		{ 
 			public void run() 
 			{ 
+				wq.stop();
 				System.out.println("MSPControlService shutdown...");
 
 				control.close();
 
 				if(pose!=null) pose.stop();
 				if(depth!=null) depth.stop();
-				
-				wq.stop();
 
 			} 
 		}); 
@@ -184,15 +186,25 @@ public class StartUp  {
 		commander = new MSPCommander(control,config);
 
 		
-		// Request parameter refresh when reconnected on ground
 		control.getStatusManager().addListener(Status.MSP_CONNECTED, (n) -> {
-			if(n.isStatus(Status.MSP_CONNECTED) && !model.sys.isStatus(Status.MSP_ARMED))
+			
+			// Request parameter refresh when reconnected on ground
+			if(n.isStatus(Status.MSP_CONNECTED) && !model.sys.isStatus(Status.MSP_ARMED)) {
 				params.requestRefresh();
+			
+			// Disable UTM stream
+			control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,(cmd,result) -> {
+				if(result == MAV_RESULT.MAV_RESULT_ACCEPTED) 
+					logger.writeLocalMsg("[msp] UTM stream disabled.",
+							MAV_SEVERITY.MAV_SEVERITY_DEBUG);
+			},IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);	
+			
+			}		
 		});
 
 		// Set initial PX4 Parameters
 		control.getStatusManager().addListener(Status.MSP_PARAMS_LOADED, (n) -> {
-			if(n.isStatus(Status.MSP_PARAMS_LOADED)) {			
+			if(n.isStatus(Status.MSP_PARAMS_LOADED) && !model.sys.isStatus(Status.MSP_ARMED)) {
 				params.sendParameter("RTL_DESCEND_ALT", 1.0f);
 				params.sendParameter("RTL_RETURN_ALT", 1.0f);
 				params.sendParameter("NAV_MC_ALT_RAD", 0.05f);
@@ -292,7 +304,7 @@ public class StartUp  {
 
 				server = HttpServer.create(new InetSocketAddress(8080),2);
 				server.createContext("/mjpeg", streamer);
-				server.setExecutor(ExecutorService.get()); // creates a default executor
+	//			server.setExecutor(ExecutorService.get()); // creates a default executor
 				server.start();
 
 				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
@@ -340,7 +352,7 @@ public class StartUp  {
 
 		// ?????
 		control.getStatusManager().addListener(StatusManager.TYPE_ESTIMATOR, ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL, StatusManager.EDGE_FALLING, (n) -> {
-			MSPLogger.getInstance().writeLocalMsg("[msp] Position estimation failure. Action required.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+			MSPLogger.getInstance().writeLocalMsg("[msp] Position estimation failure.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 			// TODO: Eventually Emergency Off if altitude < 1m
 			// or other action to recover
 		});
@@ -354,7 +366,7 @@ public class StartUp  {
 		wq.addCyclicTask("LP", 200,  hw);
 		wq.addCyclicTask("LP", 1000, inflightCheck);
 		
-		wq.addSingleTask("LP", 500, new initPX4());
+		wq.addSingleTask("LP", 300, new initPX4());
 		
 		wq.start();
 		
@@ -386,14 +398,15 @@ public class StartUp  {
 	}
 	
 	private class initPX4 implements Runnable {
+		
 
 		@Override
 		public void run() {
-			if(mode==MAVController.MODE_NORMAL && control.isConnected()) {
+			if((mode==MAVController.MODE_NORMAL || mode==MAVController.MODE_USB)  && control.isConnected()) {
 				System.out.println("Execute init PX4");
 				//control.sendShellCommand("dshot beep4");
-				control.sendShellCommand("sf1xx start -X");
-	//			control.sendShellCommand("rm3100 start");
+	//			control.sendShellCommand("sf1xx start -X");
+				control.sendShellCommand("lightware_laser_i2c start -X");	
 
 				// enforce NUTTX RTC set to companion time
 				SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY");   
@@ -401,6 +414,8 @@ public class StartUp  {
 				String s = sdf.format(new Date());
 				control.sendShellCommand("date -s \""+s+"\"");
 			}	
+			
+			
 		}	
 	}
 
