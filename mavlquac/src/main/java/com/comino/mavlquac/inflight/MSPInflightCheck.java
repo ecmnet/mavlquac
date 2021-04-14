@@ -70,6 +70,7 @@ public class MSPInflightCheck implements Runnable {
 			}
 			return;
 		}
+		
 		UpLEDControl.flash("yellow", 10);	
 	}
 

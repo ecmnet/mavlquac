@@ -62,11 +62,13 @@ import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
+import com.comino.mavodometry.estimators.MAVD455DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
-import com.comino.mavodometry.video.impl.HttpMJPEGHandler;
+import com.comino.mavodometry.video.impl.h264.HttpH264Handler;
+import com.comino.mavodometry.video.impl.mjpeg.HttpMJPEGHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
@@ -80,8 +82,11 @@ public class StartUp  {
 	
 	private final WorkQueue wq = WorkQueue.getInstance();
 
-	private static final int WIDTH  = 320;
-	private static final int HEIGHT = 240;
+	private static final int WIDTH  = 640;
+	private static final int HEIGHT = 480;
+	
+//	private static final int WIDTH  = 320;
+//	private static final int HEIGHT = 240;
 
 
 	IMAVMSPController    control    = null;
@@ -95,7 +100,9 @@ public class StartUp  {
 
 	private MAVR200PositionEstimator vision = null;
 	private MAVT265PositionEstimator pose = null;
-	private MAVR200DepthEstimator depth = null;
+	
+	private MAVD455DepthEstimator depth = null;
+//	private MAVR200DepthEstimator depth = null;
 	
 	private int mode;
 
@@ -115,22 +122,8 @@ public class StartUp  {
 		
 		this.hw = HardwareAbstraction.instance();
 
-		Runtime.getRuntime().addShutdownHook(new Thread() 
-		{ 
-			public void run() 
-			{ 
-				wq.stop();
-				System.out.println("MSPControlService shutdown...");
-
-				control.close();
-
-				if(pose!=null) pose.stop();
-				if(depth!=null) depth.stop();
-
-			} 
-		}); 
-
 		BoofConcurrency.setMaxThreads(4);
+		System.out.println("BoofConcurrency: "+BoofConcurrency.isUseConcurrent());
 
 		ExecutorService.create();
 
@@ -267,6 +260,7 @@ public class StartUp  {
 
 
 			//*** T265 odometry
+			
 
 			try {
 
@@ -279,32 +273,48 @@ public class StartUp  {
 				if(!control.isSimulation())
 					e.printStackTrace();
 			}
-
-
-			//*** R200 Depth estimation
+			
+			//*** D455 depth
 
 			try {
 
-				depth = new MAVR200DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
+				depth = new MAVD455DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
 				depth.enableStream(true);
 				depth.start();
+		
 
 			} catch(UnsatisfiedLinkError | Exception e ) {
 				System.out.println("! No depth estimation available");
 
 				if(!control.isSimulation())
 					e.printStackTrace();
-			}
-			//***********
+		    }
+
+
+//			//*** R200 Depth estimation
+//
+//			try {
+//
+//				depth = new MAVR200DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
+//				depth.enableStream(true);
+//				depth.start();
+//
+//			} catch(UnsatisfiedLinkError | Exception e ) {
+//				System.out.println("! No depth estimation available");
+//
+//				if(!control.isSimulation())
+//					e.printStackTrace();
+//			}
+//			//***********
 
 			try {
 
 
 				final HttpServer server;
 
-				server = HttpServer.create(new InetSocketAddress(8080),2);
+				server = HttpServer.create(new InetSocketAddress(8080),1);
 				server.createContext("/mjpeg", streamer);
-	//			server.setExecutor(ExecutorService.get()); // creates a default executor
+				server.setExecutor(ExecutorService.get()); // creates a default executor
 				server.start();
 
 				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
@@ -313,6 +323,12 @@ public class StartUp  {
 
 
 		}
+		
+       if(depth!=null) {
+    	   depth.enableStream(true);
+    	   pose.enableStream(false);
+       }
+		
 
 		control.connect();
 
@@ -366,6 +382,8 @@ public class StartUp  {
 		wq.addCyclicTask("LP", 200,  hw);
 		wq.addCyclicTask("LP", 1000, inflightCheck);
 		
+//		wq.addCyclicTask("LP", 100, () -> { System.out.println(streamer.getFps()); });
+		
 		wq.addSingleTask("LP", 300, new initPX4());
 		
 		wq.start();
@@ -384,6 +402,8 @@ public class StartUp  {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				
+				streamer.stop();
+				
 				wq.stop();
 
 				if(vision!=null)
@@ -392,7 +412,11 @@ public class StartUp  {
 					pose.stop();
 				if(depth!=null)
 					depth.stop();
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {}
 			}
+			
 		});
 
 	}

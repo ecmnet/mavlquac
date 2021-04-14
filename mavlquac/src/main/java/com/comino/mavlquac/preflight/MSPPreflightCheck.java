@@ -86,7 +86,7 @@ public class MSPPreflightCheck {
         	if(control.isSimulation())
 			  checkFailed("[msp] No odometry available ", WARN);
         	else
-        	  checkFailed("[msp] No odometry available ", FAILED);
+        	  checkFailed("[msp] No odometry available ", WARN);
         }
 
         // Is LPOS available
