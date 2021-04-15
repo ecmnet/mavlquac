@@ -75,7 +75,7 @@ public class Console implements Runnable {
 			return;
 		}
 		
-		if(s.contains("stop")) {
+		if(s.contains("exit")) {
 			System.exit(-1);
 			return;
 		}
@@ -83,6 +83,12 @@ public class Console implements Runnable {
 		// Workqueue status
 		if(s.contains("wq")) {
 			WorkQueue.getInstance().printStatus();
+			return;
+		}
+		
+		// Status
+		if(s.contains("st")) {
+			System.out.println(control.getCurrentModel().sys.toString());
 			return;
 		}
 		
