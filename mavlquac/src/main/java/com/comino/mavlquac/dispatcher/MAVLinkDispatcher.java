@@ -37,7 +37,6 @@ import org.mavlink.messages.lquac.msg_debug_vect;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_micro_slam;
 import org.mavlink.messages.lquac.msg_msp_status;
-import org.mavlink.messages.lquac.msg_msp_vision;
 
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.control.IMAVController;
@@ -58,7 +57,6 @@ public class MAVLinkDispatcher  {
 	private final msg_msp_status      status   = new msg_msp_status(2,1);
 	private final msg_debug_vect      debug    = new msg_debug_vect(2,1);
 	private final msg_msp_micro_slam  slam     = new msg_msp_micro_slam(2,1);
-	private final msg_msp_vision      vis      = new msg_msp_vision(2,1);
 
 	private boolean publish_microslam;
 	private boolean publish_microgrid;
@@ -74,7 +72,7 @@ public class MAVLinkDispatcher  {
 		this.config  = config;
 		this.hw      = hw;
 
-		this.publish_microgrid = config.getBoolProperty("publish_microsgrid", "true");
+		this.publish_microgrid = config.getBoolProperty("publish_microgrid", "true");
 		System.out.println("[vis] Publishing microGrid enabled: "+publish_microgrid);
 
 		this.publish_microslam = config.getBoolProperty("publish_microslam", "true");
@@ -121,7 +119,7 @@ public class MAVLinkDispatcher  {
 			}
 
 			// Publish SLAM data
-			if(publish_microslam && ( model.slam.quality > 0 || control.isSimulation())) {
+			if(publish_microslam && ( model.slam.quality > 10|| control.isSimulation())) {
 				slam.pd = model.slam.pd;
 				slam.pp = model.slam.pp;
 				slam.pv = model.slam.pv;
@@ -148,6 +146,8 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
 			
+			model.sys.wifi_quality = hw.getWifiQuality()/100f;
+			
 			status.load = hw.getCPULoad();
 			status.memory = hw.getMemoryUsage();
 			status.wifi_quality = hw.getWifiQuality();
@@ -163,6 +163,7 @@ public class MAVLinkDispatcher  {
 			status.setArch(hw.getArchName());
 			status.unix_time_us = System.currentTimeMillis() * 1000;
 			control.sendMAVLinkMessage(status);
+			
 		}
 	}
 	
