@@ -264,7 +264,7 @@ public class StartUp  {
 
 			try {
 
-				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_NED, streamer);
+				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_NED_GND, streamer);
 				pose.start();
 
 			} catch(UnsatisfiedLinkError | Exception e ) {
@@ -314,7 +314,7 @@ public class StartUp  {
 
 				server = HttpServer.create(new InetSocketAddress(8080),1);
 				server.createContext("/mjpeg", streamer);
-				server.setExecutor(ExecutorService.get()); // creates a default executor
+		//		server.setExecutor(ExecutorService.get()); // creates a default executor
 				server.start();
 
 				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
