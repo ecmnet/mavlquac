@@ -66,9 +66,11 @@ import com.comino.mavodometry.estimators.MAVD455DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
+import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.h264.HttpH264Handler;
 import com.comino.mavodometry.video.impl.mjpeg.HttpMJPEGHandler;
+import com.comino.mavodometry.video.impl.mjpeg.RTPSMjpegHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
@@ -79,36 +81,36 @@ import boofcv.struct.image.GrayU8;
 import boofcv.struct.image.Planar;
 
 public class StartUp  {
-	
+
 	private final WorkQueue wq = WorkQueue.getInstance();
 
 	private static final int WIDTH  = 640;
 	private static final int HEIGHT = 480;
-	
-//	private static final int WIDTH  = 320;
-//	private static final int HEIGHT = 240;
+
+	//	private static final int WIDTH  = 320;
+	//	private static final int HEIGHT = 240;
 
 
 	IMAVMSPController    control    = null;
 	MSPConfig	          config    = null;
 	MAVLinkDispatcher    dispatcher = null;
 
-	private HttpMJPEGHandler<Planar<GrayU8>> streamer = null;
+	private IVisualStreamHandler<Planar<GrayU8>> streamer = null;
 
 	private MSPCommander  commander = null;
 	private DataModel     model     = null;
 
 	private MAVR200PositionEstimator vision = null;
 	private MAVT265PositionEstimator pose = null;
-	
+
 	private MAVD455DepthEstimator depth = null;
-//	private MAVR200DepthEstimator depth = null;
-	
+	//	private MAVR200DepthEstimator depth = null;
+
 	private int mode;
 
 	private MSPLogger logger;
 	private PX4Parameters params;
-	
+
 
 	private final HardwareAbstraction hw;
 	private final MSPInflightCheck inflightCheck;
@@ -117,9 +119,9 @@ public class StartUp  {
 	public StartUp(String[] args) {
 
 		//		new JetsonNanoInferenceTest();
-		
+
 		addShutdownHook();
-		
+
 		this.hw = HardwareAbstraction.instance();
 
 		BoofConcurrency.setMaxThreads(4);
@@ -167,7 +169,7 @@ public class StartUp  {
 
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
-		
+
 		inflightCheck = new MSPInflightCheck(control, hw);
 		dispatcher = new MAVLinkDispatcher(control, config, hw);
 
@@ -178,20 +180,20 @@ public class StartUp  {
 
 		commander = new MSPCommander(control,config);
 
-		
+
 		control.getStatusManager().addListener(Status.MSP_CONNECTED, (n) -> {
-			
+
 			// Request parameter refresh when reconnected on ground
 			if(n.isStatus(Status.MSP_CONNECTED) && !model.sys.isStatus(Status.MSP_ARMED)) {
 				params.requestRefresh();
-			
-			// Disable UTM stream
-			control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,(cmd,result) -> {
-				if(result == MAV_RESULT.MAV_RESULT_ACCEPTED) 
-					logger.writeLocalMsg("[msp] UTM stream disabled.",
-							MAV_SEVERITY.MAV_SEVERITY_DEBUG);
-			},IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);	
-			
+
+				// Disable UTM stream
+				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,(cmd,result) -> {
+					if(result == MAV_RESULT.MAV_RESULT_ACCEPTED) 
+						logger.writeLocalMsg("[msp] UTM stream disabled.",
+								MAV_SEVERITY.MAV_SEVERITY_DEBUG);
+				},IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);	
+
 			}		
 		});
 
@@ -230,7 +232,7 @@ public class StartUp  {
 
 
 		logger.writeLocalMsg("MAVProxy "+config.getVersion()+" loaded");
-		
+
 		// Start services if required
 
 		try {	Thread.sleep(200); } catch(Exception e) { }
@@ -238,12 +240,36 @@ public class StartUp  {
 
 		if(config.getBoolProperty("vision_enabled", "true")) {
 
-			//				if(config.getBoolProperty("vision_highres", "false"))
-			//					info = new RealSenseInfo(640,480, RealSenseInfo.MODE_RGB);
-			//				else
-			//					info = new RealSenseInfo(320,240, RealSenseInfo.MODE_RGB);
+
 
 			streamer = new HttpMJPEGHandler<Planar<GrayU8>>(WIDTH,HEIGHT, control.getCurrentModel());
+			try {
+
+
+				final HttpServer server;
+
+				server = HttpServer.create(new InetSocketAddress(8080),1);
+				server.createContext("/mjpeg", (HttpMJPEGHandler<Planar<GrayU8>>)streamer);
+				//		server.setExecutor(ExecutorService.get()); // creates a default executor
+				server.start();
+
+				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+
+			} catch(Exception e) { System.out.println("! No vision stream available"); }
+
+			//			if(!control.isSimulation()) {
+			//
+			//				streamer = new RTPSMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT);
+			//				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+			//				try {
+			//					((RTPSMjpegHandler)streamer).start(1051);
+			//				} catch (Exception e1) {
+			//					// TODO Auto-generated catch block
+			//					e1.printStackTrace();
+			//				}
+			//			}
+
+
 
 			//*** R200 Odometry, Mapping, Groundtruth via T265
 
@@ -260,7 +286,7 @@ public class StartUp  {
 
 
 			//*** T265 odometry
-			
+
 
 			try {
 
@@ -273,7 +299,7 @@ public class StartUp  {
 				if(!control.isSimulation())
 					e.printStackTrace();
 			}
-			
+
 			//*** D455 depth
 
 			try {
@@ -281,58 +307,46 @@ public class StartUp  {
 				depth = new MAVD455DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
 				depth.enableStream(true);
 				depth.start();
-		
+
 
 			} catch(UnsatisfiedLinkError | Exception e ) {
 				System.out.println("! No depth estimation available");
 
 				if(!control.isSimulation())
 					e.printStackTrace();
-		    }
+			}
 
 
-//			//*** R200 Depth estimation
-//
-//			try {
-//
-//				depth = new MAVR200DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
-//				depth.enableStream(true);
-//				depth.start();
-//
-//			} catch(UnsatisfiedLinkError | Exception e ) {
-//				System.out.println("! No depth estimation available");
-//
-//				if(!control.isSimulation())
-//					e.printStackTrace();
-//			}
-//			//***********
-
-			try {
+			//			//*** R200 Depth estimation
+			//
+			//			try {
+			//
+			//				depth = new MAVR200DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
+			//				depth.enableStream(true);
+			//				depth.start();
+			//
+			//			} catch(UnsatisfiedLinkError | Exception e ) {
+			//				System.out.println("! No depth estimation available");
+			//
+			//				if(!control.isSimulation())
+			//					e.printStackTrace();
+			//			}
+			//			//***********
 
 
-				final HttpServer server;
-
-				server = HttpServer.create(new InetSocketAddress(8080),1);
-				server.createContext("/mjpeg", streamer);
-		//		server.setExecutor(ExecutorService.get()); // creates a default executor
-				server.start();
-
-				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-
-			} catch(Exception e) { System.out.println("! No vision stream available"); }
 
 
 		}
-		
-       if(depth!=null) {
-    	   depth.enableStream(true);
-    	   pose.enableStream(false);
-       }
-		
+
+		if(depth!=null) {
+			depth.enableStream(true);
+			pose.enableStream(false);
+		}
+
 
 		control.connect();
 
-		
+
 		// Dispatch commands
 		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
 			@Override
@@ -358,13 +372,13 @@ public class StartUp  {
 			}
 		});
 
-//		// To ensure, that LIDAR is started when reboot via console
-//		control.getStatusManager().addListener( Status.MSP_IMU_AVAILABILITY, (n) -> {
-//			if(n.isStatus(Status.MSP_IMU_AVAILABILITY)) {
-//				control.sendShellCommand("sf1xx start -X");
-//				//	control.sendShellCommand("rm3100 start");
-//			}
-//		});
+		//		// To ensure, that LIDAR is started when reboot via console
+		//		control.getStatusManager().addListener( Status.MSP_IMU_AVAILABILITY, (n) -> {
+		//			if(n.isStatus(Status.MSP_IMU_AVAILABILITY)) {
+		//				control.sendShellCommand("sf1xx start -X");
+		//				//	control.sendShellCommand("rm3100 start");
+		//			}
+		//		});
 
 		// ?????
 		control.getStatusManager().addListener(StatusManager.TYPE_ESTIMATOR, ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL, StatusManager.EDGE_FALLING, (n) -> {
@@ -375,35 +389,39 @@ public class StartUp  {
 
 
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
-		
+
 		// Setup WorkQueues and start them
-		
-		wq.addCyclicTask("LP", 200,  new Console(control));
+
+		Console console = new Console(control);
+		console.registerCmd("rate", () -> {
+			System.out.println("Video rate is: "+streamer.getFps() +"fps");
+		});
+
+		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 200,  hw);
 		wq.addCyclicTask("LP", 1000, inflightCheck);
-		
-//		wq.addCyclicTask("LP", 100, () -> { System.out.println(streamer.getFps()); });
-		
+
+		//		wq.addCyclicTask("LP", 100, () -> { System.out.println(streamer.getFps()); });
+
 		wq.addSingleTask("LP", 300, new initPX4());
-		
+
 		wq.start();
-		
+
 	}
 
 
 	public static void main(String[] args)  {
-        
+
 		new StartUp(args);
 
 	}
-	
+
 	private void addShutdownHook() {
-		
+
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
-				
-				streamer.stop();
-				
+
+
 				wq.stop();
 
 				if(vision!=null)
@@ -416,20 +434,20 @@ public class StartUp  {
 					Thread.sleep(200);
 				} catch (InterruptedException e) {}
 			}
-			
+
 		});
 
 	}
-	
+
 	private class initPX4 implements Runnable {
-		
+
 
 		@Override
 		public void run() {
 			if((mode==MAVController.MODE_NORMAL || mode==MAVController.MODE_USB)  && control.isConnected()) {
 				System.out.println("Execute init PX4");
 				//control.sendShellCommand("dshot beep4");
-	//			control.sendShellCommand("sf1xx start -X");
+				//			control.sendShellCommand("sf1xx start -X");
 				control.sendShellCommand("lightware_laser_i2c start -X");	
 
 				// enforce NUTTX RTC set to companion time
@@ -438,8 +456,8 @@ public class StartUp  {
 				String s = sdf.format(new Date());
 				control.sendShellCommand("date -s \""+s+"\"");
 			}	
-			
-			
+
+
 		}	
 	}
 
