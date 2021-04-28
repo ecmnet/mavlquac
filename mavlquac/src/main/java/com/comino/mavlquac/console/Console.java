@@ -37,6 +37,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -54,10 +56,16 @@ public class Console implements Runnable {
 
 	private final IMAVController control;
 	private final BufferedReader br;
+	
+	private Map<String,IConsolePrint> cmds = new HashMap<String,IConsolePrint>();
 
 	public Console(IMAVController control) {
 		this.control = control;	
 		this.br = new BufferedReader(new InputStreamReader(System.in));
+	}
+	
+	public void registerCmd(String cmd, IConsolePrint printer) {
+		cmds.put(cmd, printer);
 	}
 
 	@Override
@@ -89,6 +97,12 @@ public class Console implements Runnable {
 		// Status
 		if(s.contains("st")) {
 			System.out.println(control.getCurrentModel().sys.toString());
+			return;
+		}
+		
+		IConsolePrint p = cmds.get(s);
+		if(p!=null) {
+			p.print();
 			return;
 		}
 		
