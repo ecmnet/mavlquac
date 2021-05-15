@@ -16,6 +16,14 @@
 		<maven.compiler.target>1.10</maven.compiler.target>
 		<maven.compiler.source>1.10</maven.compiler.source>
 	</properties>
+	
+	<repositories>
+	<repository>
+			<id>in-project</id>
+			<name>In Project Repo</name>
+			<url>file://${project.basedir}/lib</url>
+		</repository>
+     </repositories>
 
 	<dependencies>
 		<dependency>

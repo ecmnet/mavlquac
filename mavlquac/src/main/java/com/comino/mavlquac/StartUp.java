@@ -33,6 +33,10 @@
 
 package com.comino.mavlquac;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -70,7 +74,7 @@ import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.h264.HttpH264Handler;
 import com.comino.mavodometry.video.impl.mjpeg.HttpMJPEGHandler;
-import com.comino.mavodometry.video.impl.mjpeg.RTPSMjpegHandler;
+import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
@@ -124,23 +128,24 @@ public class StartUp  {
 
 		this.hw = HardwareAbstraction.instance();
 
-		BoofConcurrency.setMaxThreads(4);
-		System.out.println("BoofConcurrency: "+BoofConcurrency.isUseConcurrent());
+		BoofConcurrency.setMaxThreads(2);
 
 		ExecutorService.create();
 
 		if(args.length != 0) {
 			if(args[0].contains("SIM"))
 				mode = MAVController.MODE_SITL;
-			else
-				if(args[0].contains("SERVER"))
-					mode = MAVController.MODE_SERVER;
-				else
-					if(args[0].contains("USB"))
-						mode = MAVController.MODE_USB;
-					else  
-						mode = MAVController.MODE_NORMAL;
+			else if(args[0].contains("SERVER"))
+				mode = MAVController.MODE_SERVER;
+			else if(args[0].contains("USB"))
+				mode = MAVController.MODE_USB;
+			else if(args[0].contains("log"))
+				redirectConsole();
+			else  
+				mode = MAVController.MODE_NORMAL;
 		}
+		
+		System.out.println("BoofConcurrency: "+BoofConcurrency.isUseConcurrent());
 
 		switch(mode) {
 
@@ -242,32 +247,32 @@ public class StartUp  {
 
 
 
-			streamer = new HttpMJPEGHandler<Planar<GrayU8>>(WIDTH,HEIGHT, control.getCurrentModel());
-			try {
-
-
-				final HttpServer server;
-
-				server = HttpServer.create(new InetSocketAddress(8080),1);
-				server.createContext("/mjpeg", (HttpMJPEGHandler<Planar<GrayU8>>)streamer);
-				//		server.setExecutor(ExecutorService.get()); // creates a default executor
-				server.start();
-
-				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-
-			} catch(Exception e) { System.out.println("! No vision stream available"); }
-
-			//			if(!control.isSimulation()) {
+			//			streamer = new HttpMJPEGHandler<Planar<GrayU8>>(WIDTH,HEIGHT, control.getCurrentModel());
+			//			try {
 			//
-			//				streamer = new RTPSMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT);
+			//
+			//				final HttpServer server;
+			//
+			//				server = HttpServer.create(new InetSocketAddress(8080),1);
+			//				server.createContext("/mjpeg", (HttpMJPEGHandler<Planar<GrayU8>>)streamer);
+			//				//		server.setExecutor(ExecutorService.get()); // creates a default executor
+			//				server.start();
+			//
 			//				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-			//				try {
-			//					((RTPSMjpegHandler)streamer).start(1051);
-			//				} catch (Exception e1) {
-			//					// TODO Auto-generated catch block
-			//					e1.printStackTrace();
-			//				}
-			//			}
+			//
+			//			} catch(Exception e) { System.out.println("! No vision stream available"); }
+
+			if(!control.isSimulation()) {
+
+				streamer = new RTSPMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+				try {
+					((RTSPMjpegHandler)streamer).start(1051);
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
 
 
 
@@ -393,9 +398,7 @@ public class StartUp  {
 		// Setup WorkQueues and start them
 
 		Console console = new Console(control);
-		console.registerCmd("rate", () -> {
-			System.out.println("Video rate is: "+streamer.getFps() +"fps");
-		});
+		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
 
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 200,  hw);
@@ -456,9 +459,27 @@ public class StartUp  {
 				String s = sdf.format(new Date());
 				control.sendShellCommand("date -s \""+s+"\"");
 			}	
-
-
 		}	
+	}
+	
+	private void redirectConsole()  {
+
+		try {
+			File file = new File("/home/lquac/msp.log");
+
+			if(!file.exists())
+				file.createNewFile();
+
+			PrintStream fileOut = new PrintStream(file);
+			System.setOut(fileOut);
+			System.setErr(fileOut);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 }
