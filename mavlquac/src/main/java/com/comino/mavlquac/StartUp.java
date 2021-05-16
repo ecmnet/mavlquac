@@ -139,12 +139,14 @@ public class StartUp  {
 				mode = MAVController.MODE_SERVER;
 			else if(args[0].contains("USB"))
 				mode = MAVController.MODE_USB;
-			else if(args[0].contains("log"))
+			else if(args[0].contains("log")) {
 				redirectConsole();
+				mode = MAVController.MODE_NORMAL;
+			}
 			else  
 				mode = MAVController.MODE_NORMAL;
 		}
-		
+
 		System.out.println("BoofConcurrency: "+BoofConcurrency.isUseConcurrent());
 
 		switch(mode) {
@@ -461,14 +463,15 @@ public class StartUp  {
 			}	
 		}	
 	}
-	
+
 	private void redirectConsole()  {
 
 		try {
 			File file = new File("/home/lquac/msp.log");
 
-			if(!file.exists())
-				file.createNewFile();
+			if(file.exists())
+				file.delete();
+			file.createNewFile();
 
 			PrintStream fileOut = new PrintStream(file);
 			System.setOut(fileOut);
@@ -476,7 +479,6 @@ public class StartUp  {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
