@@ -241,8 +241,10 @@ public class StartUp  {
 		logger.writeLocalMsg("MAVProxy "+config.getVersion()+" loaded");
 
 		// Start services if required
+		
+		control.connect();
 
-		try {	Thread.sleep(200); } catch(Exception e) { }
+		try {	Thread.sleep(300); } catch(Exception e) { }
 
 
 		if(config.getBoolProperty("vision_enabled", "true")) {
@@ -351,9 +353,6 @@ public class StartUp  {
 		}
 
 
-		control.connect();
-
-
 		// Dispatch commands
 		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
 			@Override
@@ -408,7 +407,7 @@ public class StartUp  {
 
 		//		wq.addCyclicTask("LP", 100, () -> { System.out.println(streamer.getFps()); });
 
-		wq.addSingleTask("LP", 300, new initPX4());
+		wq.addSingleTask("LP", 1000, new initPX4());
 
 		wq.start();
 
