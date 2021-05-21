@@ -241,7 +241,7 @@ public class StartUp  {
 		logger.writeLocalMsg("MAVProxy "+config.getVersion()+" loaded");
 
 		// Start services if required
-		
+
 		control.connect();
 
 		try {	Thread.sleep(300); } catch(Exception e) { }
@@ -425,7 +425,7 @@ public class StartUp  {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 
-
+				control.shutdown();
 				wq.stop();
 
 				if(vision!=null)
