@@ -36,6 +36,7 @@ package com.comino.mavlquac.preflight;
 import org.mavlink.messages.MAV_SEVERITY;
 
 import com.comino.mavcom.control.IMAVMSPController;
+import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.LogMessage;
 import com.comino.mavcom.model.segment.Status;
@@ -69,6 +70,8 @@ public class MSPPreflightCheck {
 	public int performArmCheck(PX4Parameters params) {
 
 		maxLevel  = OK;
+		
+		MSPLogger.getInstance().writeLocalMsg("[msp] Performing preflight checks", MAV_SEVERITY.MAV_SEVERITY_NOTICE);
 
 		// Is LIDAR available ?
 		if(!model.sys.isSensorAvailable(Status.MSP_LIDAR_AVAILABILITY) && !model.sys.isSensorAvailable(Status.MSP_SONAR_AVAILABILITY))
@@ -92,6 +95,9 @@ public class MSPPreflightCheck {
         // Is LPOS available
         if(!model.sys.isStatus(Status.MSP_LPOS_VALID))
      		checkFailed("[msp] LPOS not available", WARN);
+        
+        if(Math.abs(model.state.l_z) > 0.3)
+        	checkFailed("[msp] local z-position not on ground", WARN);
 
         // Is GPOS available
         if(!model.sys.isStatus(Status.MSP_GPOS_VALID))

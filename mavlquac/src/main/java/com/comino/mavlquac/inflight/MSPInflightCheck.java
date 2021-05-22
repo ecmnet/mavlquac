@@ -27,6 +27,7 @@ public class MSPInflightCheck implements Runnable {
 
 	private long  lastMessage_tms = 0;
 	private long  tms = 0;
+	private long level_change_tms;
 
 	public MSPInflightCheck(IMAVMSPController control,HardwareAbstraction hw) {
 		this.control  = control;
@@ -44,7 +45,8 @@ public class MSPInflightCheck implements Runnable {
 
 	public void reset() {
 		warnLevel = Integer.MAX_VALUE;
-		lastMessage_tms = 0;
+		lastMessage_tms  = 0;
+		level_change_tms = 0;
 	}
 
 	public void run() {
@@ -72,6 +74,10 @@ public class MSPInflightCheck implements Runnable {
 		}
 		
 		UpLEDControl.flash("yellow", 10);	
+		
+		if((System.currentTimeMillis() - level_change_tms) > 10000) {
+			reset();
+		}
 	}
 
 	private int performChecks() {
@@ -88,7 +94,9 @@ public class MSPInflightCheck implements Runnable {
 			return OK;
 		}
 
-
+        if(Math.abs(model.state.l_z - model.vision.z) > 0.3f && model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
+        	notifyCheck("EKF2 not aligned with odometry.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+        }
 
 		if(model.sys.bat_state > 1)
 			notifyCheck("PX4 battery warning.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
@@ -120,8 +128,11 @@ public class MSPInflightCheck implements Runnable {
 
 
 	private void notifyCheck(String message, int level) {
-		if(level < warnLevel) warnLevel = level;
-		if((System.currentTimeMillis() - lastMessage_tms) > 2000 && message != null) {
+		if(level < warnLevel) { 
+			warnLevel = level;
+			level_change_tms = System.currentTimeMillis();
+		}
+		if((System.currentTimeMillis() - lastMessage_tms) > 5000 && message != null) {
 			lastMessage_tms = System.currentTimeMillis();
 			control.writeLogMessage(new LogMessage(message,level));	
 		}
