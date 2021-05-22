@@ -403,7 +403,7 @@ public class StartUp  {
 
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 200,  hw);
-		wq.addCyclicTask("LP", 1000, inflightCheck);
+		wq.addCyclicTask("LP", 500,  inflightCheck);
 
 		//		wq.addCyclicTask("LP", 100, () -> { System.out.println(streamer.getFps()); });
 
