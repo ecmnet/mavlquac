@@ -238,7 +238,7 @@ public class StartUp  {
 
 
 
-		logger.writeLocalMsg("MAVProxy "+config.getVersion()+" loaded");
+		logger.writeLocalMsg("MAVProxy (Version: "+config.getVersion()+") loaded");
 
 		// Start services if required
 
@@ -378,21 +378,6 @@ public class StartUp  {
 			}
 		});
 
-		//		// To ensure, that LIDAR is started when reboot via console
-		//		control.getStatusManager().addListener( Status.MSP_IMU_AVAILABILITY, (n) -> {
-		//			if(n.isStatus(Status.MSP_IMU_AVAILABILITY)) {
-		//				control.sendShellCommand("sf1xx start -X");
-		//				//	control.sendShellCommand("rm3100 start");
-		//			}
-		//		});
-
-		// ?????
-		control.getStatusManager().addListener(StatusManager.TYPE_ESTIMATOR, ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL, StatusManager.EDGE_FALLING, (n) -> {
-			MSPLogger.getInstance().writeLocalMsg("[msp] Position estimation failure.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
-			// TODO: Eventually Emergency Off if altitude < 1m
-			// or other action to recover
-		});
-
 
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
@@ -404,8 +389,6 @@ public class StartUp  {
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 200,  hw);
 		wq.addCyclicTask("LP", 500,  inflightCheck);
-
-		//		wq.addCyclicTask("LP", 100, () -> { System.out.println(streamer.getFps()); });
 
 		wq.addSingleTask("LP", 1000, new initPX4());
 
@@ -460,6 +443,7 @@ public class StartUp  {
 				String s = sdf.format(new Date());
 				control.sendShellCommand("date -s \""+s+"\"");
 			}	
+			
 		}	
 	}
 

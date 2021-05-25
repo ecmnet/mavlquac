@@ -97,7 +97,7 @@ public class MSPPreflightCheck {
      		checkFailed("[msp] LPOS not available", WARN);
         
         if(Math.abs(model.state.l_z) > 0.3)
-        	checkFailed("[msp] local z-position not on ground", WARN);
+        	checkFailed("[msp] Local position not on ground", WARN);
 
         // Is GPOS available
         if(!model.sys.isStatus(Status.MSP_GPOS_VALID))

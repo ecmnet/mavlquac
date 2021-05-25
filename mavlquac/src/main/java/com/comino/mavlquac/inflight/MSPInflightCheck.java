@@ -1,11 +1,14 @@
 package com.comino.mavlquac.inflight;
 
+import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
 import org.mavlink.messages.MAV_SEVERITY;
 
 import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.LogMessage;
 import com.comino.mavcom.model.segment.Status;
+import com.comino.mavcom.param.PX4Parameters;
+import com.comino.mavcom.status.StatusManager;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.hw.upboard.UpLEDControl;
 
@@ -27,14 +30,17 @@ public class MSPInflightCheck implements Runnable {
 
 	private long  lastMessage_tms = 0;
 	private long  tms = 0;
-	private long level_change_tms;
+	private long  level_change_tms;
+
+	private float min_voltage = 12;
+
 
 	public MSPInflightCheck(IMAVMSPController control,HardwareAbstraction hw) {
 		this.control  = control;
 		this.model    = control.getCurrentModel();
 		this.hw       = hw;
 		reset();
-		
+
 		if(hw.getArchId() == HardwareAbstraction.UPBOARD)
 			UpLEDControl.clear();
 	}
@@ -50,8 +56,11 @@ public class MSPInflightCheck implements Runnable {
 	}
 
 	public void run() {
+
+		readParameters();
+
 		result = performChecks();
-		
+
 		if(hw.getArchId() != HardwareAbstraction.UPBOARD) 
 			return;
 
@@ -59,29 +68,41 @@ public class MSPInflightCheck implements Runnable {
 
 			switch(result) {
 			case MSPInflightCheck.EMERGENCY:
-				UpLEDControl.flash("red", 50);
+				UpLEDControl.flash(UpLEDControl.RED, 50);
 				break;
 			case MSPInflightCheck.WARN:
-				UpLEDControl.flash("yellow", 10);
+				UpLEDControl.flash(UpLEDControl.YELLOW, 10);
 				break;
 			case MSPInflightCheck.INIT:
-				UpLEDControl.flash("yellow", 30);
+				UpLEDControl.flash(UpLEDControl.ORANGE, 30);
 				break;
 			default:
-				UpLEDControl.flash("green", 10);
+				UpLEDControl.flash(UpLEDControl.GREEN, 10);
 			}
 			return;
 		}
-		
-		UpLEDControl.flash("yellow", 10);	
-		
+
+		UpLEDControl.flash(UpLEDControl.ORANGE, 10);	
+
 		if((System.currentTimeMillis() - level_change_tms) > 10000) {
 			reset();
 		}
 	}
 
+
+	private void readParameters() {
+
+		PX4Parameters params = PX4Parameters.getInstance();
+		if(params==null)
+			return;
+
+		min_voltage = params.getParamValue("BAT1_N_CELLS", 4) * params.getParamValue("BAT1_V_EMPTY", 3.05f);
+	
+
+	}
+
 	private int performChecks() {
-		
+
 
 		// Set to init phase until CV is initialized the first time
 		if(model.sys.t_boot_ms < 20000 && !model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
@@ -94,21 +115,23 @@ public class MSPInflightCheck implements Runnable {
 			return OK;
 		}
 
-        if(Math.abs(model.state.l_z - model.vision.z) > 0.3f && model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
-        	notifyCheck("EKF2 not aligned with odometry.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
-        }
+		if(!model.est.isFlagSet(ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL)) 
+			notifyCheck("[msp] EKF2 Position estimation failure.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+
+		if(Math.abs(model.state.l_z - model.vision.z) > 0.3f && model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) 
+			notifyCheck("[msp] EKF2 not aligned with odometry.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 
 		if(model.sys.bat_state > 1)
-			notifyCheck("PX4 battery warning.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
+			notifyCheck(" [msp] PX4 battery warning.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
 
 		if(hw.getBatteryTemperature() > 45.0f )
-			notifyCheck("MSP battery warning: Temperature too high.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
+			notifyCheck("[msp] battery warning: Temperature too high.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
 
-		if(model.battery.b0 < 12.3f)
-			notifyCheck("MSP battery warning: Voltage low.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
+		if(model.battery.b0 < (min_voltage * 1.05f))
+			notifyCheck("[msp] battery warning: Voltage low.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
 
-		if(model.battery.b0 < 12.0f)
-			notifyCheck("MSP battery warning: Voltage critical low.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
+		if(model.battery.b0 < min_voltage)
+			notifyCheck("[msp] battery warning: Voltage critical low.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
 
 
 		if(!model.sys.isSensorAvailable(Status.MSP_PIX4FLOW_AVAILABILITY))
