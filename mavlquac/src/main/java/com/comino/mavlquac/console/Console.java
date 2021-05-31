@@ -56,14 +56,14 @@ public class Console implements Runnable {
 
 	private final IMAVController control;
 	private final BufferedReader br;
-	
+
 	private Map<String,IConsolePrint> cmds = new HashMap<String,IConsolePrint>();
 
 	public Console(IMAVController control) {
 		this.control = control;	
 		this.br = new BufferedReader(new InputStreamReader(System.in));
 	}
-	
+
 	public void registerCmd(String cmd, IConsolePrint printer) {
 		cmds.put(cmd, printer);
 	}
@@ -78,34 +78,40 @@ public class Console implements Runnable {
 	}
 
 	private void parseConsole(String s) {
-		
+
 		if(s.isEmpty()) {
 			return;
 		}
-		
+
 		if(s.contains("exit")) {
 			System.exit(-1);
 			return;
 		}
-		
+
 		// Workqueue status
 		if(s.contains("wq")) {
 			WorkQueue.getInstance().printStatus();
 			return;
 		}
-		
+
 		// Status
 		if(s.contains("st")) {
 			System.out.println(control.getCurrentModel().sys.toString());
 			return;
 		}
-		
+
+		// Vision flags
+		if(s.contains("vis")) {
+			System.out.println(control.getCurrentModel().vision.toString());
+			return;
+		}
+
 		IConsolePrint p = cmds.get(s);
 		if(p!=null) {
 			p.print();
 			return;
 		}
-		
+
 		// otherwise execute it as OS level command
 		if(!control.getCurrentModel().sys.isStatus(Status.MSP_ARMED)) {
 			executeOSCommand(s);
