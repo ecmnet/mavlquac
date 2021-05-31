@@ -101,7 +101,7 @@ public class Console implements Runnable {
 		}
 
 		// Vision flags
-		if(s.contains("vis")) {
+		if(s.contains("vi")) {
 			System.out.println(control.getCurrentModel().vision.toString());
 			return;
 		}
