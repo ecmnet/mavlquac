@@ -469,6 +469,7 @@ public class StartUp  {
 
 	}
 	
+	@SuppressWarnings("rawtypes")
 	public static String getJarContainingFolder(Class aclass)  {
 		  CodeSource codeSource = aclass.getProtectionDomain().getCodeSource();
 
