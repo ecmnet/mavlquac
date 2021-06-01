@@ -38,6 +38,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.net.URLDecoder;
+import java.security.CodeSource;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
@@ -153,7 +155,7 @@ public class StartUp  {
 
 		case  MAVController.MODE_NORMAL:
 
-			config  = MSPConfig.getInstance("/home/lquac/","msp.properties");
+			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass()),"msp.properties");
 			control = new MAVProxyController(MAVController.MODE_NORMAL);
 			System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
@@ -161,7 +163,7 @@ public class StartUp  {
 
 		case MAVController.MODE_SERVER:
 
-			config  = MSPConfig.getInstance("/home/ecm/lquac/","msp.properties");
+			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass()),"msp.properties");
 			control = new MAVProxyController(MAVController.MODE_SERVER);
 			System.out.println("MSPControlService (LQUAC JetsonNano) version "+config.getVersion()+" Mode = "+mode);
 			control.getCurrentModel().clear();
@@ -466,6 +468,30 @@ public class StartUp  {
 		}
 
 	}
+	
+	public static String getJarContainingFolder(Class aclass)  {
+		  CodeSource codeSource = aclass.getProtectionDomain().getCodeSource();
+
+		  File jarFile;
+		  
+		  try {
+
+		  if (codeSource.getLocation() != null) {
+		    jarFile = new File(codeSource.getLocation().toURI());
+		  }
+		  else {
+		    String path = aclass.getResource(aclass.getSimpleName() + ".class").getPath();
+		    String jarFilePath = path.substring(path.indexOf(":") + 1, path.indexOf("!"));
+		    jarFilePath = URLDecoder.decode(jarFilePath, "UTF-8");
+		    jarFile = new File(jarFilePath);
+		  }
+		  return jarFile.getParentFile().getAbsolutePath();
+		  
+		  } catch(Exception e) {
+			  System.out.println("Properties not found: "+e.getMessage());
+			  return null;
+		  }
+		}
 
 }
 
