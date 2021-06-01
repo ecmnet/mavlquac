@@ -431,7 +431,7 @@ public class StartUp  {
 
 		@Override
 		public void run() {
-			if((mode==MAVController.MODE_NORMAL || mode==MAVController.MODE_USB)  && control.isConnected()) {
+			if((mode==MAVController.MODE_NORMAL || mode==MAVController.MODE_USB)  && model.sys.isStatus(Status.MSP_CONNECTED)) {
 				System.out.println("Execute init PX4");
 				//control.sendShellCommand("dshot beep4");
 				//			control.sendShellCommand("sf1xx start -X");
