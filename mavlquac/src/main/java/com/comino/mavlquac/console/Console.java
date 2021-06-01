@@ -112,27 +112,27 @@ public class Console implements Runnable {
 			return;
 		}
 
-		// otherwise execute it as OS level command
-		if(!control.getCurrentModel().sys.isStatus(Status.MSP_ARMED)) {
-			executeOSCommand(s);
-		}		
+//		// otherwise execute it as OS level command
+//		if(!control.getCurrentModel().sys.isStatus(Status.MSP_ARMED)) {
+//			executeOSCommand(s);
+//		}		
 	}
 
 
-	private void executeOSCommand(String command) {
-		try {
-			Process process;
-			process = Runtime.getRuntime().exec(command);
-			StreamGobbler streamGobbler = 
-					new StreamGobbler(process.getInputStream(), System.out::println);
-			Executors.newSingleThreadExecutor().submit(streamGobbler);
-			int exitCode = process.waitFor();
-			assert exitCode == 0;	
-		} catch (Exception e) {
-			MSPLogger.getInstance().writeLocalMsg("OS command '"+command+"' failed: "+e.getMessage(),
-					MAV_SEVERITY.MAV_SEVERITY_WARNING);
-		}
-	}
+//	private void executeOSCommand(String command) {
+//		try {
+//			Process process;
+//			process = Runtime.getRuntime().exec(command);
+//			StreamGobbler streamGobbler = 
+//					new StreamGobbler(process.getInputStream(), System.out::println);
+//			Executors.newSingleThreadExecutor().submit(streamGobbler);
+//			int exitCode = process.waitFor();
+//			assert exitCode == 0;	
+//		} catch (Exception e) {
+//			MSPLogger.getInstance().writeLocalMsg("OS command '"+command+"' failed: "+e.getMessage(),
+//					MAV_SEVERITY.MAV_SEVERITY_WARNING);
+//		}
+//	}
 
 	private static class StreamGobbler implements Runnable {
 		private InputStream inputStream;
