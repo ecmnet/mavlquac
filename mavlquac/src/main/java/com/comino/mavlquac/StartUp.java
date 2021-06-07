@@ -452,7 +452,7 @@ public class StartUp  {
 	private void redirectConsole()  {
 
 		try {
-			File file = new File("/home/lquac/msp.log");
+			File file = new File(getJarContainingFolder(this.getClass())+"/msp.log");
 
 			if(file.exists())
 				file.delete();
@@ -486,6 +486,7 @@ public class StartUp  {
 		    jarFilePath = URLDecoder.decode(jarFilePath, "UTF-8");
 		    jarFile = new File(jarFilePath);
 		  }
+		  System.out.println("Properties searched in "+jarFile.getParentFile().getAbsolutePath());
 		  return jarFile.getParentFile().getAbsolutePath();
 		  
 		  } catch(Exception e) {
