@@ -6,43 +6,84 @@
 	<property name="lib.dir" value="lib" />
 	<property name="target.dir" value="target" />
 	<property name="props.dir" value="properties" />
-	<property name="deploy.dir" value="/Volumes/lquac" />
+
+	<property name="deploy_up.dir" value="/Volumes/lquac" />
+	<property name="deploy_jetson.dir" value="/Volumes/ecm/lquac" />
 
 
 	<target name="com" >
 		<exec dir="${workspace.dir}/MAVCom/mavcom" executable="sh">
-			<arg line="-c '/usr/local/Cellar/maven/3.6.3/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.6.3_1/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
 	<target name="map" >
 		<exec dir="${workspace.dir}/MAVMap/mavmap" executable="sh">
-			<arg line="-c '/usr/local/Cellar/maven/3.6.3/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.6.3_1/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
 	<target name="odometry" >
 		<exec dir="${workspace.dir}/MAVOdometry/mavodometry" executable="sh">
-			<arg line="-c '/usr/local/Cellar/maven/3.6.3/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.6.3_1/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
 	<target name="control" >
 		<exec dir="${workspace.dir}/MAVControl/mavcontrol" executable="sh">
-			<arg line="-c '/usr/local/Cellar/maven/3.6.3/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.6.3_1/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
 	<target name="utils" >
 		<exec dir="${workspace.dir}/MAVUtils/mavutils" executable="sh">
-			<arg line="-c '/usr/local/Cellar/maven/3.6.3/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.6.3_1/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
-	<target name="lquac" depends="utils, com, map, control, odometry" >
+	<target name="lquac" depends="utils, com, map, odometry, control" >
 		<exec dir="${workspace.dir}/MAVLquac/mavlquac" executable="sh">
-			<arg line="-c '/usr/local/Cellar/maven/3.6.3/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.6.3_1/bin/mvn clean install -amd'" />
 		</exec>
+	</target>
+
+	<target name="upboard" depends="lquac">
+		<tstamp>
+			<format property="current.time" pattern="dd.MM.yyyy" />
+		</tstamp>
+		<buildnumber />
+		<echo>Current build number:${build.number}</echo>
+				<propertyfile file="${props.dir}/msp.properties">
+					<entry key="build" value="${build.number}" />
+					<entry key="build_date" value="${current.time}" />
+				</propertyfile>
+		<copy file="${target.dir}/mavlquac-0.0.1-jar-with-dependencies.jar" todir="${deploy_up.dir}"/>
+		<copy file="${props.dir}/msp.properties" todir="${deploy_up.dir}"/>
+		<!--
+		<copy todir="${deploy.dir}">
+			<fileset dir="${dis.dir}/mavlquac*-dependencies.jar" />
+		</copy>
+		-->
+		
+	</target>
+
+	<target name="jetson" depends="lquac">
+			<!--
+			<copy todir="${deploy.dir}">
+				<fileset dir="${dis.dir}/mavlquac*-dependencies.jar" />
+			</copy>
+			-->
+			<tstamp>
+				<format property="current.time" pattern="dd.MM.yyyy" />
+			</tstamp>
+			<buildnumber />
+			<echo>Current build number:${build.number}</echo>
+			<propertyfile file="${props.dir}/msp.properties">
+				<entry key="build" value="${build.number}" />
+				<entry key="build_date" value="${current.time}" />
+			</propertyfile>
+		    <copy file="${target.dir}/mavlquac-0.0.1-jar-with-dependencies.jar" todir="${deploy_jetson.dir}"/>
+			<copy file="${props.dir}/msp.properties" todir="${deploy_jetson.dir}"/>
 	</target>
 
 	<target name="build"  depends="lquac">
@@ -51,25 +92,6 @@
 					<include name="mavcom*.jar" />
 				</fileset>
 			</copy>
-	</target>
-
-	<target name="deploy" depends="lquac">
-		<copy file="${target.dir}/mavlquac-0.0.1-jar-with-dependencies.jar" todir="${deploy.dir}"/>
-		<copy file="${props.dir}/msp.properties" todir="${deploy.dir}"/>
-		<!--
-		<copy todir="${deploy.dir}">
-			<fileset dir="${dis.dir}/mavlquac*-dependencies.jar" />
-		</copy>
-		-->
-		<tstamp>
-			<format property="current.time" pattern="dd.MM.yyyy" />
-		</tstamp>
-		<buildnumber />
-		<echo>Current build number:${build.number}</echo>
-		<propertyfile file="${props.dir}/msp.properties">
-			<entry key="build" value="${build.number}" />
-			<entry key="build_date" value="${current.time}" />
-		</propertyfile>
 	</target>
 
 </project>
