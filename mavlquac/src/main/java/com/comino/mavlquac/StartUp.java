@@ -411,6 +411,7 @@ public class StartUp  {
 			public void run() {
 
 				control.shutdown();
+				wq.printStatus();
 				wq.stop();
 
 				if(vision!=null)
