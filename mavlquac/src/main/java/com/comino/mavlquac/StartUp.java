@@ -78,6 +78,7 @@ import com.comino.mavodometry.video.impl.h264.HttpH264Handler;
 import com.comino.mavodometry.video.impl.mjpeg.HttpMJPEGHandler;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
+import com.comino.mavutils.hw.jetson.CycleUSBHub;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
 import com.sun.net.httpserver.HttpServer;
@@ -129,6 +130,13 @@ public class StartUp  {
 		addShutdownHook();
 
 		this.hw = HardwareAbstraction.instance();
+		
+		if(hw.getArchId() == HardwareAbstraction.JETSON) {
+			CycleUSBHub.run(); // TODO put it in script at boot
+		} else {
+			try { Thread.sleep(300); } catch(Exception e) { }
+		}
+
 
 		BoofConcurrency.setMaxThreads(2);
 
@@ -244,10 +252,6 @@ public class StartUp  {
 
 		// Start services if required
 
-		control.connect();
-
-		try {	Thread.sleep(300); } catch(Exception e) { }
-
 
 		if(config.getBoolProperty("vision_enabled", "true")) {
 
@@ -348,12 +352,14 @@ public class StartUp  {
 
 
 		}
+		
+		control.connect();
 
 		if(depth!=null) {
 			depth.enableStream(true);
 			pose.enableStream(false);
 		}
-
+		
 
 		// Dispatch commands
 		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
@@ -446,7 +452,7 @@ public class StartUp  {
 				String s = sdf.format(new Date());
 				control.sendShellCommand("date -s \""+s+"\"");
 			}	
-			
+
 		}	
 	}
 
@@ -469,32 +475,32 @@ public class StartUp  {
 		}
 
 	}
-	
+
 	@SuppressWarnings("rawtypes")
 	public static String getJarContainingFolder(Class aclass)  {
-		  CodeSource codeSource = aclass.getProtectionDomain().getCodeSource();
+		CodeSource codeSource = aclass.getProtectionDomain().getCodeSource();
 
-		  File jarFile;
-		  
-		  try {
+		File jarFile;
 
-		  if (codeSource.getLocation() != null) {
-		    jarFile = new File(codeSource.getLocation().toURI());
-		  }
-		  else {
-		    String path = aclass.getResource(aclass.getSimpleName() + ".class").getPath();
-		    String jarFilePath = path.substring(path.indexOf(":") + 1, path.indexOf("!"));
-		    jarFilePath = URLDecoder.decode(jarFilePath, "UTF-8");
-		    jarFile = new File(jarFilePath);
-		  }
-		  System.out.println("Properties searched in "+jarFile.getParentFile().getAbsolutePath());
-		  return jarFile.getParentFile().getAbsolutePath();
-		  
-		  } catch(Exception e) {
-			  System.out.println("Properties not found: "+e.getMessage());
-			  return null;
-		  }
+		try {
+
+			if (codeSource.getLocation() != null) {
+				jarFile = new File(codeSource.getLocation().toURI());
+			}
+			else {
+				String path = aclass.getResource(aclass.getSimpleName() + ".class").getPath();
+				String jarFilePath = path.substring(path.indexOf(":") + 1, path.indexOf("!"));
+				jarFilePath = URLDecoder.decode(jarFilePath, "UTF-8");
+				jarFile = new File(jarFilePath);
+			}
+			System.out.println("Properties searched in "+jarFile.getParentFile().getAbsolutePath());
+			return jarFile.getParentFile().getAbsolutePath();
+
+		} catch(Exception e) {
+			System.out.println("Properties not found: "+e.getMessage());
+			return null;
 		}
+	}
 
 }
 
