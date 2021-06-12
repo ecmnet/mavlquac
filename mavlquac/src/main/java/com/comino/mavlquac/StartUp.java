@@ -130,12 +130,6 @@ public class StartUp  {
 		addShutdownHook();
 
 		this.hw = HardwareAbstraction.instance();
-		
-		if(hw.getArchId() == HardwareAbstraction.JETSON) {
-			CycleUSBHub.run(); // TODO put it in script at boot
-		} else {
-			try { Thread.sleep(300); } catch(Exception e) { }
-		}
 
 
 		BoofConcurrency.setMaxThreads(2);
@@ -183,6 +177,15 @@ public class StartUp  {
 			control = new MAVProxyController(mode);
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
+		
+		params = PX4Parameters.getInstance(control);
+		
+//		if(hw.getArchId() == HardwareAbstraction.JETSON && config.getBoolProperty("cycle_usb", "true")) {
+//			CycleUSBHub.run(); // TODO put it in script at boot
+//		} else {
+			try { Thread.sleep(300); } catch(Exception e) { }
+//		}
+		
 
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
@@ -193,7 +196,6 @@ public class StartUp  {
 		control.start();
 		model = control.getCurrentModel();
 
-		params = PX4Parameters.getInstance(control);
 
 		commander = new MSPCommander(control,config);
 
