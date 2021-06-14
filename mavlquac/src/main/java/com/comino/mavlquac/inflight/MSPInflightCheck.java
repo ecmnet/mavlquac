@@ -118,8 +118,9 @@ public class MSPInflightCheck implements Runnable {
 		if(!model.est.isFlagSet(ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL)) 
 			notifyCheck("[msp] EKF2 Position estimation failure.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 
-		if(Math.abs(model.state.l_z - model.vision.z) > 0.3f && model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) 
+		if(Math.abs(model.state.l_z - model.vision.z) > 0.3f && model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
 			notifyCheck("[msp] EKF2 not aligned with odometry.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+		}
 
 		if(model.sys.bat_state > 1)
 			notifyCheck(" [msp] PX4 battery warning.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
@@ -159,6 +160,8 @@ public class MSPInflightCheck implements Runnable {
 			lastMessage_tms = System.currentTimeMillis();
 			control.writeLogMessage(new LogMessage(message,level));	
 		}
+		if(warnLevel > WARN)
+			model.sys.setStatus(Status.MSP_READY_FOR_FLIGHT, false);
 	}
 
 }
