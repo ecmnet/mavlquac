@@ -37,20 +37,17 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.security.CodeSource;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
-import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
 import org.mavlink.messages.IMAVLinkMessageID;
 import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_RESULT;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
-import org.mavlink.messages.lquac.msg_adsb_vehicle;
 import org.mavlink.messages.lquac.msg_msp_command;
 
 import com.comino.mavcom.config.MSPConfig;
@@ -69,19 +66,14 @@ import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVD455DepthEstimator;
-import com.comino.mavodometry.estimators.MAVR200DepthEstimator;
 import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
-import com.comino.mavodometry.video.impl.h264.HttpH264Handler;
-import com.comino.mavodometry.video.impl.mjpeg.HttpMJPEGHandler;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
-import com.comino.mavutils.hw.jetson.CycleUSBHub;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
-import com.sun.net.httpserver.HttpServer;
 
 import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
@@ -204,7 +196,7 @@ public class StartUp  {
 
 			// Request parameter refresh when reconnected on ground
 			if(n.isStatus(Status.MSP_CONNECTED) && !model.sys.isStatus(Status.MSP_ARMED)) {
-				params.requestRefresh();
+				
 
 				// Disable UTM stream
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,(cmd,result) -> {
@@ -279,7 +271,7 @@ public class StartUp  {
 				streamer = new RTSPMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
 				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
 				try {
-					((RTSPMjpegHandler)streamer).start(1051);
+					((RTSPMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -453,6 +445,7 @@ public class StartUp  {
 				sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 				String s = sdf.format(new Date());
 				control.sendShellCommand("date -s \""+s+"\"");
+				params.requestRefresh(false);
 			}	
 
 		}	
