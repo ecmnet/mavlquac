@@ -347,6 +347,10 @@ public class StartUp  {
 
 		}
 		
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {}
+		
 		control.connect();
 
 		if(depth!=null) {
