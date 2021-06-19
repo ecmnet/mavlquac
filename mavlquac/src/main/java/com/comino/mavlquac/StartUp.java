@@ -143,7 +143,6 @@ public class StartUp  {
 				mode = MAVController.MODE_NORMAL;
 		}
 
-		System.out.println("BoofConcurrency: "+BoofConcurrency.isUseConcurrent());
 
 		switch(mode) {
 
@@ -242,7 +241,7 @@ public class StartUp  {
 
 
 
-		logger.writeLocalMsg("MAVProxy (Version: "+config.getVersion()+") loaded");
+		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
 
 		// Start services if required
 
