@@ -193,16 +193,11 @@ public class StartUp  {
 
 		control.getStatusManager().addListener(Status.MSP_CONNECTED, (n) -> {
 
-			// Request parameter refresh when reconnected on ground
+			// Setting up MAVLINK streams
 			if(n.isStatus(Status.MSP_CONNECTED) && !model.sys.isStatus(Status.MSP_ARMED)) {
-				
-
-				// Disable UTM stream
-				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,(cmd,result) -> {
-					if(result == MAV_RESULT.MAV_RESULT_ACCEPTED) 
-						logger.writeLocalMsg("[msp] UTM stream disabled.",
-								MAV_SEVERITY.MAV_SEVERITY_DEBUG);
-				},IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);	
+				System.out.println("Setting up MAVLINK streams...");
+				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);			
+				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_STATUS,10);	
 
 			}		
 		});
