@@ -50,7 +50,7 @@ public class MAVLinkDispatcher  {
 	private final DataModel        model;
 	private final IMAVController control;
 	private final MSPConfig       config;
-	
+
 	private final HardwareAbstraction hw;
 
 	private final msg_msp_micro_grid  grid     = new msg_msp_micro_grid(2,1);
@@ -61,7 +61,7 @@ public class MAVLinkDispatcher  {
 	private boolean publish_microslam;
 	private boolean publish_microgrid;
 	private boolean publish_debug;
-	
+
 	// Rework using WorkQueue!
 	private final WorkQueue wq = WorkQueue.getInstance();
 
@@ -80,17 +80,18 @@ public class MAVLinkDispatcher  {
 
 		this.publish_debug = config.getBoolProperty("publish_debug", "true");
 		System.out.println("[vis] Publishing debug messages enabled: "+publish_debug);
-		
+
 		wq.addCyclicTask("NP", 10,  new Dispatch_10ms());
 		wq.addCyclicTask("NP", 50,  new Dispatch_50ms());
+		wq.addCyclicTask("NP", 100, new Dispatch_100ms());
 		wq.addCyclicTask("NP", 200, new Dispatch_200ms());
-	//	wq.addCyclicTask("NP", 500, new Dispatch_500ms());
+		//	wq.addCyclicTask("NP", 500, new Dispatch_500ms());
 	}
-	
+
 	private class Dispatch_10ms implements Runnable {
 		@Override
 		public void run() {
-			
+
 			// Publish grid
 			if(publish_microgrid && model.grid.hasTransfers()) {
 				if(model.grid.toArray(grid.data)) {
@@ -102,14 +103,13 @@ public class MAVLinkDispatcher  {
 					control.sendMAVLinkMessage(grid);
 				}
 			}
-	
 		}
 	}
-	
+
 	private class Dispatch_50ms implements Runnable {
 		@Override
 		public void run() {
-			
+
 			// Debug vector
 			if(publish_debug) {
 				debug.x = model.debug.x;
@@ -117,6 +117,15 @@ public class MAVLinkDispatcher  {
 				debug.z = model.debug.z;
 				control.sendMAVLinkMessage(debug);
 			}
+
+		}
+	}
+
+
+	private class Dispatch_100ms implements Runnable {
+		@Override
+		public void run() {
+
 
 			// Publish SLAM data
 			if(publish_microslam && ( model.slam.quality > 0 || control.isSimulation())) {
@@ -141,13 +150,13 @@ public class MAVLinkDispatcher  {
 			}
 		}
 	}
-	
+
 	private class Dispatch_200ms implements Runnable {
 		@Override
 		public void run() {
-			
+
 			model.sys.wifi_quality = hw.getWifiQuality()/100f;
-			
+
 			status.load = hw.getCPULoad();
 			status.memory = hw.getMemoryUsage();
 			status.wifi_quality = hw.getWifiQuality();
@@ -163,16 +172,16 @@ public class MAVLinkDispatcher  {
 			status.setArch(hw.getArchName());
 			status.unix_time_us = System.currentTimeMillis() * 1000;
 			control.sendMAVLinkMessage(status);
-			
+
 		}
 	}
-	
+
 	private class Dispatch_500ms implements Runnable {
 		@Override
 		public void run() {
-			
+
 		}
-		
+
 	}
 
 }
