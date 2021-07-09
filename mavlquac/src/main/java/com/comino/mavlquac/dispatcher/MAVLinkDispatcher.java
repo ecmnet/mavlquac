@@ -39,6 +39,7 @@ import org.mavlink.messages.lquac.msg_msp_micro_slam;
 import org.mavlink.messages.lquac.msg_msp_status;
 
 import com.comino.mavcom.config.MSPConfig;
+import com.comino.mavcom.config.MSPParams;
 import com.comino.mavcom.control.IMAVController;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Vision;
@@ -72,13 +73,13 @@ public class MAVLinkDispatcher  {
 		this.config  = config;
 		this.hw      = hw;
 
-		this.publish_microgrid = config.getBoolProperty("publish_microgrid", "true");
+		this.publish_microgrid = config.getBoolProperty(MSPParams.PUBLISH_MICROGRID, "true");
 		System.out.println("[vis] Publishing microGrid enabled: "+publish_microgrid);
 
-		this.publish_microslam = config.getBoolProperty("publish_microslam", "true");
+		this.publish_microslam = config.getBoolProperty(MSPParams.PUBLISH_MICROSLAM, "true");
 		System.out.println("[vis] Publishing microSlam enabled: "+publish_microslam);
 
-		this.publish_debug = config.getBoolProperty("publish_debug", "true");
+		this.publish_debug = config.getBoolProperty(MSPParams.PUBLISH_DEBUG, "true");
 		System.out.println("[vis] Publishing debug messages enabled: "+publish_debug);
 
 		wq.addCyclicTask("NP", 10,  new Dispatch_10ms());
