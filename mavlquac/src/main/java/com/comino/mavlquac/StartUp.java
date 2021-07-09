@@ -45,6 +45,7 @@ import java.util.TimeZone;
 
 import org.mavlink.messages.IMAVLinkMessageID;
 import org.mavlink.messages.MAV_CMD;
+import org.mavlink.messages.MAV_MODE_FLAG;
 import org.mavlink.messages.MAV_RESULT;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
@@ -56,7 +57,9 @@ import com.comino.mavcom.control.impl.MAVController;
 import com.comino.mavcom.control.impl.MAVProxyController;
 import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.mavlink.IMAVLinkListener;
+import com.comino.mavcom.mavlink.MAV_CUST_MODE;
 import com.comino.mavcom.model.DataModel;
+import com.comino.mavcom.model.segment.LogMessage;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
@@ -220,6 +223,7 @@ public class StartUp  {
 		// Preflight checks when arming
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
 				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
+					
 					if(MSPPreflightCheck.getInstance(control).performArmCheck(params)==MSPPreflightCheck.FAILED) {
 						control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,0 );
 						logger.writeLocalMsg("[msp] Disarmed. PreFlight health check failed",
