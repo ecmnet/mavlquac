@@ -102,8 +102,10 @@ public class MSPInflightCheck implements Runnable {
 	}
 
 	private int performChecks() {
-
-
+		
+		if(control.isSimulation())
+			return OK;
+	
 		// Set to init phase until CV is initialized the first time
 		if(model.sys.t_boot_ms < 20000 && !model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
 			reset();
@@ -156,6 +158,7 @@ public class MSPInflightCheck implements Runnable {
 			warnLevel = level;
 			level_change_tms = System.currentTimeMillis();
 		}
+		System.out.println("Inflight: "+message);
 		if((System.currentTimeMillis() - lastMessage_tms) > 5000 && message != null) {
 			lastMessage_tms = System.currentTimeMillis();
 			control.writeLogMessage(new LogMessage(message,level));	
