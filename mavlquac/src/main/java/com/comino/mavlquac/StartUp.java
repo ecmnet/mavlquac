@@ -52,6 +52,7 @@ import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
 
 import com.comino.mavcom.config.MSPConfig;
+import com.comino.mavcom.config.MSPParams;
 import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.control.impl.MAVController;
 import com.comino.mavcom.control.impl.MAVProxyController;
@@ -245,7 +246,7 @@ public class StartUp  {
 		// Start services if required
 
 
-		if(config.getBoolProperty("vision_enabled", "true")) {
+		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
 
 
 
