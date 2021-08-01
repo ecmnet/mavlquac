@@ -1,5 +1,7 @@
 package com.comino.mavlquac.preflight;
 
+import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
+
 /****************************************************************************
 *
 *   Copyright (c) 2020 Eike Mansfeld ecm@gmx.de. All rights reserved.
@@ -94,7 +96,7 @@ public class MSPPreflightCheck {
 
         // Is LPOS available
         if(!model.sys.isStatus(Status.MSP_LPOS_VALID))
-     		checkFailed("[msp] LPOS not available", WARN);
+     		checkFailed("[msp] LPOS not available", FAILED);
         
         if(Math.abs(model.state.l_z) > 0.3)
         	checkFailed("[msp] Local position not on ground", WARN);
@@ -105,7 +107,7 @@ public class MSPPreflightCheck {
 
         // check Alt.amsl
      	if(Float.isNaN(model.hud.ag))
-     		checkFailed("[msp] Altitude amsl not available", WARN);
+     		checkFailed("[msp] Altitude amsl not available", FAILED);
 
      	// Is IMU available ?
      	if(!model.sys.isSensorAvailable(Status.MSP_IMU_AVAILABILITY))
@@ -122,6 +124,9 @@ public class MSPPreflightCheck {
      	if(params.getParam("EKF2_AID_MASK")!=null && ((short)params.getParam("EKF2_AID_MASK").value & 0x0008) != 0x0008)
      		checkFailed("[msp] Vision not fused in EKF2", WARN);
 
+//     	if(model.est.isFlagSet(ESTIMATOR_STATUS_FLAGS.ESTIMATOR_ACCEL_ERROR))
+//     		checkFailed("[msp] EKF2 not ready", FAILED);
+     		
 
      	// ...more
 
@@ -129,6 +134,7 @@ public class MSPPreflightCheck {
 	}
 
 	private void checkFailed(String r, int level) {
+
 		LogMessage m = new LogMessage();
 		m.text = r;
 		switch(level) {
@@ -141,6 +147,8 @@ public class MSPPreflightCheck {
 			control.writeLogMessage(m);
 			break;
 		case FAILED:
+			if(control.isSimulation())
+				level = MAV_SEVERITY.MAV_SEVERITY_WARNING;
 			m.severity = MAV_SEVERITY.MAV_SEVERITY_CRITICAL;
 			control.writeLogMessage(m);
 			break;

@@ -32,8 +32,6 @@ public class MSPInflightCheck implements Runnable {
 	private long  tms = 0;
 	private long  level_change_tms;
 
-	private float min_voltage = 12;
-
 
 	public MSPInflightCheck(IMAVMSPController control,HardwareAbstraction hw) {
 		this.control  = control;
@@ -95,10 +93,6 @@ public class MSPInflightCheck implements Runnable {
 		PX4Parameters params = PX4Parameters.getInstance();
 		if(params==null)
 			return;
-
-		min_voltage = params.getParamValue("BAT1_N_CELLS", 4) * params.getParamValue("BAT1_V_EMPTY", 3.05f);
-	
-
 	}
 
 	private int performChecks() {
@@ -121,7 +115,7 @@ public class MSPInflightCheck implements Runnable {
 			notifyCheck("[msp] EKF2 Position estimation failure.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 
 		if(Math.abs(model.state.l_z - model.vision.z) > 0.3f && model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
-			notifyCheck("[msp] EKF2 not aligned with odometry.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+			notifyCheck("[msp] EKF2 alti. not aligned with EV.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 		}
 
 		if(model.sys.bat_state > 1)
@@ -129,13 +123,6 @@ public class MSPInflightCheck implements Runnable {
 
 		if(hw.getBatteryTemperature() > 45.0f )
 			notifyCheck("[msp] battery warning: Temperature too high.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
-
-		if(model.battery.b0 < (min_voltage * 1.05f))
-			notifyCheck("[msp] battery warning: Voltage low.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
-
-		if(model.battery.b0 < min_voltage)
-			notifyCheck("[msp] battery warning: Voltage critical low.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
-
 
 		if(!model.sys.isSensorAvailable(Status.MSP_PIX4FLOW_AVAILABILITY))
 			notifyCheck(null, MAV_SEVERITY.MAV_SEVERITY_WARNING);
