@@ -125,10 +125,10 @@ public class MSPInflightCheck implements Runnable {
 			notifyCheck("[msp] battery warning: Temperature too high.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
 
 		if(!model.sys.isSensorAvailable(Status.MSP_PIX4FLOW_AVAILABILITY))
-			notifyCheck(null, MAV_SEVERITY.MAV_SEVERITY_WARNING);
+			notifyCheck("LIDAR", MAV_SEVERITY.MAV_SEVERITY_WARNING);
 
 		if(!model.sys.isSensorAvailable(Status.MSP_LIDAR_AVAILABILITY))
-			notifyCheck(null, MAV_SEVERITY.MAV_SEVERITY_WARNING);
+			notifyCheck("OPTFLOW", MAV_SEVERITY.MAV_SEVERITY_WARNING);
 
 		// Todo: Register actions and executes them
 
