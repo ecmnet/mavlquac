@@ -443,6 +443,7 @@ public class StartUp  {
 				String s = sdf.format(new Date());
 				control.sendShellCommand("date -s \""+s+"\"");
 				params.requestRefresh(false);
+				model.sys.setStatus(Status.MSP_ACTIVE, true);
 			}	
 
 		}	
