@@ -47,6 +47,7 @@ import org.mavlink.messages.MAV_SEVERITY;
 
 import com.comino.mavcom.control.IMAVController;
 import com.comino.mavcom.log.MSPLogger;
+import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavutils.workqueue.WorkQueue;
@@ -116,6 +117,13 @@ public class Console implements Runnable {
 		// Vision flags
 		if(s.contains("vi")) {
 			System.out.println(control.getCurrentModel().vision.toString());
+			return;
+		}
+
+		// TimeSync
+		if(s.contains("ts")) {
+			System.out.println("Time: "+DataModel.getSynchronizedPX4Time_us()+"us");
+			System.out.println("Timesync offset: "+(DataModel.t_offset_ns/1000L)+"us");
 			return;
 		}
 

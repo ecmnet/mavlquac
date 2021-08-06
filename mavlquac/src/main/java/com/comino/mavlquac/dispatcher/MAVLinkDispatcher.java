@@ -37,6 +37,7 @@ import org.mavlink.messages.lquac.msg_debug_vect;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_micro_slam;
 import org.mavlink.messages.lquac.msg_msp_status;
+import org.mavlink.messages.lquac.msg_timesync;
 
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
@@ -58,6 +59,7 @@ public class MAVLinkDispatcher  {
 	private final msg_msp_status      status   = new msg_msp_status(2,1);
 	private final msg_debug_vect      debug    = new msg_debug_vect(2,1);
 	private final msg_msp_micro_slam  slam     = new msg_msp_micro_slam(2,1);
+	private final msg_timesync        sync_s   = new msg_timesync(1, 1);
 
 	private boolean publish_microslam;
 	private boolean publish_microgrid;
@@ -92,6 +94,11 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_10ms implements Runnable {
 		@Override
 		public void run() {
+			
+			// Publish timesync to Vehicle
+			sync_s.tc1 = 0;
+			sync_s.ts1 = DataModel.getSynchronizedPX4Time_us()*1000L;
+			control.sendMAVLinkMessage(sync_s);
 
 			// Publish grid
 			if(publish_microgrid && model.grid.hasTransfers()) {
@@ -126,6 +133,8 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_100ms implements Runnable {
 		@Override
 		public void run() {
+			
+			msg_timesync sync_s = new msg_timesync(255, 1);
 
 
 			// Publish SLAM data
@@ -171,7 +180,7 @@ public class MAVLinkDispatcher  {
 			status.status = control.getCurrentModel().sys.getStatus();
 			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
 			status.setArch(hw.getArchName());
-			status.unix_time_us = System.currentTimeMillis() * 1000;
+			status.unix_time_us = DataModel.getSynchronizedPX4Time_us();
 			control.sendMAVLinkMessage(status);
 
 		}
