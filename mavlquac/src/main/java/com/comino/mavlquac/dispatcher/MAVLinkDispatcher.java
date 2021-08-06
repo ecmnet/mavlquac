@@ -43,6 +43,7 @@ import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
 import com.comino.mavcom.control.IMAVController;
 import com.comino.mavcom.model.DataModel;
+import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.model.segment.Vision;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.workqueue.WorkQueue;
@@ -94,7 +95,7 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_10ms implements Runnable {
 		@Override
 		public void run() {
-			
+
 			// Publish timesync to Vehicle
 			sync_s.tc1 = 0;
 			sync_s.ts1 = DataModel.getSynchronizedPX4Time_us()*1000L;
@@ -133,7 +134,7 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_100ms implements Runnable {
 		@Override
 		public void run() {
-			
+
 			msg_timesync sync_s = new msg_timesync(255, 1);
 
 

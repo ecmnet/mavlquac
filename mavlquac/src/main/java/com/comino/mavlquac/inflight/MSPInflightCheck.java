@@ -62,7 +62,7 @@ public class MSPInflightCheck implements Runnable {
 		if(hw.getArchId() != HardwareAbstraction.UPBOARD) 
 			return;
 
-		if(model.sys.isStatus(Status.MSP_ACTIVE)) {
+		if(model.sys.isStatus(Status.MSP_CONNECTED)) {
 
 			switch(result) {
 			case MSPInflightCheck.EMERGENCY:
@@ -112,10 +112,10 @@ public class MSPInflightCheck implements Runnable {
 		}
 
 		if(!model.est.isFlagSet(ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL)) 
-			notifyCheck("[msp] EKF2 Position estimation failure.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+			notifyCheck("[msp] EKF2 Position estimation failure.", MAV_SEVERITY.MAV_SEVERITY_ERROR);
 
 		if(Math.abs(model.state.l_z - model.vision.z) > 0.3f && model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
-			notifyCheck("[msp] EKF2 alti. not aligned with EV.", MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
+			notifyCheck("[msp] EKF2 altitude not aligned to EV.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
 		}
 
 		if(model.sys.bat_state > 1)
@@ -125,10 +125,10 @@ public class MSPInflightCheck implements Runnable {
 			notifyCheck("[msp] battery warning: Temperature too high.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
 
 		if(!model.sys.isSensorAvailable(Status.MSP_PIX4FLOW_AVAILABILITY))
-			notifyCheck("LIDAR", MAV_SEVERITY.MAV_SEVERITY_WARNING);
+			notifyCheck(null, MAV_SEVERITY.MAV_SEVERITY_WARNING);
 
 		if(!model.sys.isSensorAvailable(Status.MSP_LIDAR_AVAILABILITY))
-			notifyCheck("OPTFLOW", MAV_SEVERITY.MAV_SEVERITY_WARNING);
+			notifyCheck(null, MAV_SEVERITY.MAV_SEVERITY_WARNING);
 
 		// Todo: Register actions and executes them
 
