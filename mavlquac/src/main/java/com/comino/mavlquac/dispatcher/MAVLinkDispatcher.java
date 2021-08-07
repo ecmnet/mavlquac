@@ -33,10 +33,13 @@
 
 package com.comino.mavlquac.dispatcher;
 
+import java.time.Instant;
+
 import org.mavlink.messages.lquac.msg_debug_vect;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_micro_slam;
 import org.mavlink.messages.lquac.msg_msp_status;
+import org.mavlink.messages.lquac.msg_system_time;
 import org.mavlink.messages.lquac.msg_timesync;
 
 import com.comino.mavcom.config.MSPConfig;
@@ -60,7 +63,6 @@ public class MAVLinkDispatcher  {
 	private final msg_msp_status      status   = new msg_msp_status(2,1);
 	private final msg_debug_vect      debug    = new msg_debug_vect(2,1);
 	private final msg_msp_micro_slam  slam     = new msg_msp_micro_slam(2,1);
-	private final msg_timesync        sync_s   = new msg_timesync(1, 1);
 
 	private boolean publish_microslam;
 	private boolean publish_microgrid;
@@ -89,17 +91,13 @@ public class MAVLinkDispatcher  {
 		wq.addCyclicTask("NP", 50,  new Dispatch_50ms());
 		wq.addCyclicTask("NP", 100, new Dispatch_100ms());
 		wq.addCyclicTask("NP", 200, new Dispatch_200ms());
-		//	wq.addCyclicTask("NP", 500, new Dispatch_500ms());
+		wq.addCyclicTask("LP", 500, new Dispatch_500ms());
 	}
 
 	private class Dispatch_10ms implements Runnable {
 		@Override
 		public void run() {
 
-			// Publish timesync to Vehicle
-			sync_s.tc1 = 0;
-			sync_s.ts1 = DataModel.getSynchronizedPX4Time_us()*1000L;
-			control.sendMAVLinkMessage(sync_s);
 
 			// Publish grid
 			if(publish_microgrid && model.grid.hasTransfers()) {
@@ -134,10 +132,7 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_100ms implements Runnable {
 		@Override
 		public void run() {
-
-			msg_timesync sync_s = new msg_timesync(255, 1);
-
-
+					
 			// Publish SLAM data
 			if(publish_microslam && ( model.slam.quality > 0 || control.isSimulation())) {
 				slam.pd = model.slam.pd;
@@ -181,7 +176,7 @@ public class MAVLinkDispatcher  {
 			status.status = control.getCurrentModel().sys.getStatus();
 			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
 			status.setArch(hw.getArchName());
-			status.unix_time_us = DataModel.getSynchronizedPX4Time_us();
+			status.unix_time_us = DataModel.getUnixTime_us();
 			control.sendMAVLinkMessage(status);
 
 		}
@@ -190,6 +185,12 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_500ms implements Runnable {
 		@Override
 		public void run() {
+			
+//			Instant ins = Instant.now();
+//			long now_ns = ins.getEpochSecond() * 1000000000L + ins.getNano();
+//			
+//			time.time_unix_usec = now_ns /1000L;
+//			control.sendMAVLinkMessage(time);
 
 		}
 

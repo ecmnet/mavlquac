@@ -122,7 +122,8 @@ public class Console implements Runnable {
 
 		// TimeSync
 		if(s.contains("ts")) {
-			System.out.println("Time: "+DataModel.getSynchronizedPX4Time_us()+"us");
+			System.out.println("Montonic time:   "+DataModel.getSynchronizedPX4Time_us()+"us");
+			System.out.println("Unix time:       "+DataModel.getUnixTime_us()+"us");
 			System.out.println("Timesync offset: "+(DataModel.t_offset_ns/1000L)+"us");
 			return;
 		}
