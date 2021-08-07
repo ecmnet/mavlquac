@@ -186,11 +186,6 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
 			
-//			Instant ins = Instant.now();
-//			long now_ns = ins.getEpochSecond() * 1000000000L + ins.getNano();
-//			
-//			time.time_unix_usec = now_ns /1000L;
-//			control.sendMAVLinkMessage(time);
 
 		}
 
