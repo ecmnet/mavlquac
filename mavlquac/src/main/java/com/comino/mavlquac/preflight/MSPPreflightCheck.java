@@ -36,6 +36,7 @@ import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
 ****************************************************************************/
 
 import org.mavlink.messages.MAV_SEVERITY;
+import org.mavlink.messages.MSP_AUTOCONTROL_MODE;
 
 import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.log.MSPLogger;
@@ -72,6 +73,9 @@ public class MSPPreflightCheck {
 	public int performArmCheck(PX4Parameters params) {
 
 		maxLevel  = OK;
+		
+		if(model.sys.isAutopilotMode(MSP_AUTOCONTROL_MODE.FCUM)) 
+			return maxLevel;
 		
 		MSPLogger.getInstance().writeLocalMsg("[msp] Performing preflight checks", MAV_SEVERITY.MAV_SEVERITY_NOTICE);
 

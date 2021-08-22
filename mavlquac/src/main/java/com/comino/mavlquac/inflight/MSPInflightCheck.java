@@ -2,6 +2,7 @@ package com.comino.mavlquac.inflight;
 
 import org.mavlink.messages.ESTIMATOR_STATUS_FLAGS;
 import org.mavlink.messages.MAV_SEVERITY;
+import org.mavlink.messages.MSP_AUTOCONTROL_MODE;
 
 import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.model.DataModel;
@@ -55,6 +56,9 @@ public class MSPInflightCheck implements Runnable {
 
 	public void run() {
 
+		if(model.sys.isAutopilotMode(MSP_AUTOCONTROL_MODE.FCUM)) 
+			return;
+
 		readParameters();
 
 		result = performChecks();
@@ -96,10 +100,10 @@ public class MSPInflightCheck implements Runnable {
 	}
 
 	private int performChecks() {
-		
+
 		if(control.isSimulation())
 			return OK;
-	
+
 		// Set to init phase until CV is initialized the first time
 		if(model.sys.t_boot_ms < 20000 && !model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
 			reset();
@@ -113,10 +117,6 @@ public class MSPInflightCheck implements Runnable {
 
 		if(!model.est.isFlagSet(ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL)) 
 			notifyCheck("[msp] EKF2 Position estimation failure.", MAV_SEVERITY.MAV_SEVERITY_ERROR);
-
-		if(Math.abs(model.state.l_z - model.vision.z) > 0.3f && model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
-			notifyCheck("[msp] EKF2 altitude not aligned to EV.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
-		}
 
 		if(model.sys.bat_state > 1)
 			notifyCheck(" [msp] PX4 battery warning.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
