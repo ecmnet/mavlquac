@@ -55,10 +55,7 @@ public class MSPInflightCheck implements Runnable {
 	}
 
 	public void run() {
-
-		if(model.sys.isAutopilotMode(MSP_AUTOCONTROL_MODE.FCUM)) 
-			return;
-
+		
 		readParameters();
 
 		result = performChecks();
@@ -101,7 +98,7 @@ public class MSPInflightCheck implements Runnable {
 
 	private int performChecks() {
 
-		if(control.isSimulation())
+		if(control.isSimulation() || model.sys.isAutopilotMode(MSP_AUTOCONTROL_MODE.FCUM))
 			return OK;
 
 		// Set to init phase until CV is initialized the first time
@@ -145,7 +142,6 @@ public class MSPInflightCheck implements Runnable {
 			warnLevel = level;
 			level_change_tms = System.currentTimeMillis();
 		}
-		System.out.println("Inflight: "+message);
 		if((System.currentTimeMillis() - lastMessage_tms) > 5000 && message != null) {
 			lastMessage_tms = System.currentTimeMillis();
 			control.writeLogMessage(new LogMessage(message,level));	
