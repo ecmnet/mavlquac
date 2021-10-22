@@ -162,7 +162,7 @@ public class MAVLinkDispatcher  {
 		public void run() {
 
 			model.sys.wifi_quality = hw.getWifiQuality()/100f;
-
+            
 			status.load = hw.getCPULoad();
 			status.memory = hw.getMemoryUsage();
 			status.wifi_quality = hw.getWifiQuality();

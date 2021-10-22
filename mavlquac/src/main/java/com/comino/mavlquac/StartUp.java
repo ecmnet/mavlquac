@@ -40,6 +40,7 @@ import java.io.PrintStream;
 import java.net.URLDecoder;
 import java.security.CodeSource;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -48,6 +49,7 @@ import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
+import org.mavlink.messages.lquac.msg_system_time;
 
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
@@ -66,7 +68,6 @@ import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVD455DepthEstimator;
-import com.comino.mavodometry.estimators.MAVR200PositionEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
@@ -75,6 +76,7 @@ import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
 
+import boofcv.BoofVersion;
 import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
 import boofcv.struct.image.Planar;
@@ -99,7 +101,6 @@ public class StartUp  {
 	private MSPCommander  commander = null;
 	private DataModel     model     = null;
 
-	private MAVR200PositionEstimator vision = null;
 	private MAVT265PositionEstimator pose = null;
 
 	private MAVD455DepthEstimator depth = null;
@@ -118,11 +119,11 @@ public class StartUp  {
 	public StartUp(String[] args) {
 
 		//		new JetsonNanoInferenceTest();
+		
 
 		addShutdownHook();
 
 		this.hw = HardwareAbstraction.instance();
-
 
 		BoofConcurrency.setMaxThreads(2);
 
@@ -168,15 +169,12 @@ public class StartUp  {
 			control = new MAVProxyController(mode);
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
-		
+
 		params = PX4Parameters.getInstance(control);
-		
-//		if(hw.getArchId() == HardwareAbstraction.JETSON && config.getBoolProperty("cycle_usb", "true")) {
-//			CycleUSBHub.run(); // TODO put it in script at boot
-//		} else {
-			try { Thread.sleep(300); } catch(Exception e) { }
-//		}
-		
+
+		try { Thread.sleep(300); } catch(Exception e) { }
+
+
 
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
@@ -189,18 +187,17 @@ public class StartUp  {
 
 
 		commander = new MSPCommander(control,config);
-
-
-		control.getStatusManager().addListener(Status.MSP_CONNECTED, (n) -> {
-
-			// Setting up MAVLINK streams
-			if(n.isStatus(Status.MSP_CONNECTED) && !model.sys.isStatus(Status.MSP_ARMED)) {
+		
+		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_CONNECTED, StatusManager.EDGE_RISING, (a) -> {
+			if(!model.sys.isStatus(Status.MSP_ARMED)) {
 				System.out.println("Setting up MAVLINK streams...");
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);			
-				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_STATUS,10);	
-
-			}		
+				//	control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_STATUS,100);
+				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,0);
+				params.requestRefresh(true);
+			}
 		});
+
 
 		// Set initial PX4 Parameters
 		control.getStatusManager().addListener(Status.MSP_PARAMS_LOADED, (n) -> {
@@ -211,6 +208,8 @@ public class StartUp  {
 
 				if(control.isSimulation()) {
 					params.sendParameter("COM_RC_OVERRIDE", 0);
+					params.sendParameter("MPC_XY_VEL_P_ACC", 4.5f);
+					params.sendParameter("MIS_TAKEOFF_ALT", 1.5f);
 				}
 			}
 
@@ -220,7 +219,7 @@ public class StartUp  {
 		// Preflight checks when arming
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
 				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
-					
+
 					if(MSPPreflightCheck.getInstance(control).performArmCheck(params)==MSPPreflightCheck.FAILED) {
 						control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,0 );
 						logger.writeLocalMsg("[msp] Disarmed. PreFlight health check failed",
@@ -263,12 +262,19 @@ public class StartUp  {
 
 				streamer = new RTSPMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
 				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+				streamer.registerNoVideoListener(() -> {
+					if(pose!=null)  
+						pose.enableStream(true);  
+					else if(depth!=null) 
+						depth.enableStream(true);
+				});
 				try {
 					((RTSPMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
+			
 			}
 
 
@@ -292,7 +298,7 @@ public class StartUp  {
 
 			try {
 
-				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_NED_GND, streamer);
+				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
 				pose.start();
 
 			} catch(UnsatisfiedLinkError | Exception e ) {
@@ -339,18 +345,18 @@ public class StartUp  {
 
 
 		}
-		
+
 		try {
 			Thread.sleep(1000);
 		} catch (InterruptedException e) {}
-		
+
 		control.connect();
 
 		if(depth!=null) {
 			depth.enableStream(true);
 			pose.enableStream(false);
 		}
-		
+
 
 		// Dispatch commands
 		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
@@ -380,16 +386,22 @@ public class StartUp  {
 
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
+		// Send system time
+
+//		Instant ins = Instant.now();
+//		long now_ns = ins.getEpochSecond() * 1000000000L + ins.getNano();
+//		msg_system_time time     = new msg_system_time(1, 1);
+//		time.time_unix_usec = now_ns /1000L;
+//		control.sendMAVLinkMessage(time);
+
 		// Setup WorkQueues and start them
 
 		Console console = new Console(control);
 		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
 
 		wq.addCyclicTask("LP", 200,  console);
-		wq.addCyclicTask("LP", 200,  hw);
+		wq.addCyclicTask("LP", 500,  hw);
 		wq.addCyclicTask("LP", 500,  inflightCheck);
-
-		wq.addSingleTask("LP", 1000, new initPX4());
 
 		wq.start();
 
@@ -411,8 +423,6 @@ public class StartUp  {
 				wq.printStatus();
 				wq.stop();
 
-				if(vision!=null)
-					vision.stop();
 				if(pose!=null)
 					pose.stop();
 				if(depth!=null)
@@ -435,15 +445,16 @@ public class StartUp  {
 				System.out.println("Execute init PX4");
 				//control.sendShellCommand("dshot beep4");
 				//			control.sendShellCommand("sf1xx start -X");
-				control.sendShellCommand("lightware_laser_i2c start -X");	
+				
+
 
 				// enforce NUTTX RTC set to companion time
 				SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY");   
 				sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 				String s = sdf.format(new Date());
 				control.sendShellCommand("date -s \""+s+"\"");
+				control.sendShellCommand("lightware_laser_i2c start -X");	
 				params.requestRefresh(false);
-				model.sys.setStatus(Status.MSP_ACTIVE, true);
 			}	
 
 		}	
