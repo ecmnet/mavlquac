@@ -39,6 +39,7 @@ import org.mavlink.messages.lquac.msg_debug_vect;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_micro_slam;
 import org.mavlink.messages.lquac.msg_msp_status;
+import org.mavlink.messages.lquac.msg_msp_trajectory;
 import org.mavlink.messages.lquac.msg_system_time;
 import org.mavlink.messages.lquac.msg_timesync;
 
@@ -46,6 +47,7 @@ import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
 import com.comino.mavcom.control.IMAVController;
 import com.comino.mavcom.model.DataModel;
+import com.comino.mavcom.model.segment.Slam;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.model.segment.Vision;
 import com.comino.mavutils.hw.HardwareAbstraction;
@@ -63,6 +65,7 @@ public class MAVLinkDispatcher  {
 	private final msg_msp_status      status   = new msg_msp_status(2,1);
 	private final msg_debug_vect      debug    = new msg_debug_vect(2,1);
 	private final msg_msp_micro_slam  slam     = new msg_msp_micro_slam(2,1);
+	private final msg_msp_trajectory  traj 	   = new msg_msp_trajectory(2,1);
 
 	private boolean publish_microslam;
 	private boolean publish_microgrid;
@@ -132,7 +135,7 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_100ms implements Runnable {
 		@Override
 		public void run() {
-					
+
 			// Publish SLAM data
 			if(publish_microslam && ( model.slam.quality > 0 || control.isSimulation())) {
 				slam.pd = model.slam.pd;
@@ -154,6 +157,31 @@ public class MAVLinkDispatcher  {
 				slam.tms = model.slam.tms;
 				control.sendMAVLinkMessage(slam);
 			}
+
+			// Trajectory publishing	
+
+			if(model.slam.flags == Slam.OFFBOARD_FLAG_MOVE) {
+				
+				traj.ls = model.traj.ls;
+				traj.fs = model.traj.fs;
+
+				traj.ax = model.traj.ax;
+				traj.ay = model.traj.ay;
+				traj.bx = model.traj.bx;
+				traj.by = model.traj.by;	
+				traj.gx = model.traj.gx;
+				traj.gy = model.traj.gy;	
+				traj.sx = model.traj.sx;
+				traj.sy = model.traj.sy;	
+				traj.svx = model.traj.svx;
+				traj.svy = model.traj.svy;
+
+				traj.tms = model.traj.tms;
+
+				control.sendMAVLinkMessage(traj);
+				
+			}
+
 		}
 	}
 
@@ -162,7 +190,7 @@ public class MAVLinkDispatcher  {
 		public void run() {
 
 			model.sys.wifi_quality = hw.getWifiQuality()/100f;
-            
+
 			status.load = hw.getCPULoad();
 			status.memory = hw.getMemoryUsage();
 			status.wifi_quality = hw.getWifiQuality();
@@ -185,7 +213,7 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_500ms implements Runnable {
 		@Override
 		public void run() {
-			
+
 
 		}
 
