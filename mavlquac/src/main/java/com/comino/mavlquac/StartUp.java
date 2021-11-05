@@ -208,6 +208,7 @@ public class StartUp  {
 
 				if(control.isSimulation()) {
 					params.sendParameter("COM_RC_OVERRIDE", 0);
+					params.sendParameter("COM_RCL_EXCEPT", 7);
 					params.sendParameter("MPC_XY_VEL_P_ACC", 4.5f);
 					params.sendParameter("MIS_TAKEOFF_ALT", 1.5f);
 				}
@@ -226,6 +227,7 @@ public class StartUp  {
 								MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 					} 
 				});
+		
 
 		// ?????
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_SERVICES,
@@ -402,6 +404,7 @@ public class StartUp  {
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
 		wq.addCyclicTask("LP", 500,  inflightCheck);
+		wq.addSingleTask("LP", 100, new initPX4());
 
 		wq.start();
 
