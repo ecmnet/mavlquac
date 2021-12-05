@@ -125,8 +125,6 @@ public class MSPPreflightCheck {
      	if(params.getParam("RTL_RETURN_ALT")!=null && params.getParam("RTL_RETURN_ALT").value != 1.0)
      		checkFailed("[msp] Return altitude not set to 1.0m", WARN);
      	
-     	if(params.getParam("EKF2_AID_MASK")!=null && ((short)params.getParam("EKF2_AID_MASK").value & 0x0008) != 0x0008)
-     		checkFailed("[msp] Vision not fused in EKF2", WARN);
 
 //     	if(model.est.isFlagSet(ESTIMATOR_STATUS_FLAGS.ESTIMATOR_ACCEL_ERROR))
 //     		checkFailed("[msp] EKF2 not ready", FAILED);
