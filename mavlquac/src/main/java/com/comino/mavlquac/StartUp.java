@@ -69,9 +69,9 @@ import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
-import com.comino.mavodometry.estimators.MAVD455DepthEstimator;
-import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
-import com.comino.mavodometry.estimators.MAVWebCamNullEstimator;
+import com.comino.mavodometry.estimators.depth.MAVD455DepthEstimator;
+import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
+import com.comino.mavodometry.estimators.simple.MAVWebCamNullEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
@@ -332,23 +332,20 @@ public class StartUp  {
 
 	private void startOdometry() {
 
-		if(!control.isSimulation()) {
-
-			streamer = new RTSPMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
-			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-			streamer.registerNoVideoListener(() -> {
-				if(pose!=null)  
-					pose.enableStream(true);  
-				else if(depth!=null) 
-					depth.enableStream(true);
-			});
-			try {
-				((RTSPMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
-			} catch (Exception e1) {
-				// TODO Auto-generated catch block
+		streamer = new RTSPMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+		streamer.registerNoVideoListener(() -> {
+			if(pose!=null)  
+				pose.enableStream(true);  
+			else if(depth!=null) 
+				depth.enableStream(true);
+		});
+		try {
+			((RTSPMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			if(!control.isSimulation())
 				e1.printStackTrace();
-			}
-
 		}
 
 		model.vision.setStatus(Vision.VIDEO_ENABLED, false);
@@ -369,36 +366,40 @@ public class StartUp  {
 		//*** WebCam as depth
 
 		//		if(!control.isSimulation()) {
-		
-					try {
-						depth = new MAVWebCamNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
-						depth.start();
-		
-					} catch(UnsatisfiedLinkError | Exception e ) {
-						System.out.println("! No Webcam available");
-		
-						if(!control.isSimulation())
-							e.printStackTrace();
-					}
-		
-//				}
 
-//		try {
-//
-//			depth = new MAVD455DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
-//			depth.enableStream(true);
-//			depth.start();
-//			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-//
-//
-//		} catch(UnsatisfiedLinkError | Exception e ) {
-//			System.out.println("! No depth estimation available");
-//
-//			if(!control.isSimulation())
-//				e.printStackTrace();
-//		}
+		try {
+			depth = new MAVWebCamNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+			depth.start();
+
+		} catch(UnsatisfiedLinkError | Exception e ) {
+			System.out.println("! No Webcam available");
+
+			if(!control.isSimulation())
+				e.printStackTrace();
+		}
+
+		//		}
+
+		//		try {
+		//
+		//			depth = new MAVD455DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
+		//			depth.enableStream(true);
+		//			depth.start();
+		//			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+		//
+		//
+		//		} catch(UnsatisfiedLinkError | Exception e ) {
+		//			System.out.println("! No depth estimation available");
+		//
+		//			//if(!control.isSimulation())
+		//				e.printStackTrace();
+		//		}
 
 
+		if(pose!=null) {
+			depth.enableStream(false);
+			pose.enableStream(true);
+		}
 
 		if(depth!=null) {
 			depth.enableStream(true);
