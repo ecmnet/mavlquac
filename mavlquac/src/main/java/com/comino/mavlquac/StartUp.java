@@ -60,6 +60,7 @@ import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.mavlink.IMAVLinkListener;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Status;
+import com.comino.mavcom.model.segment.Vision;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
@@ -67,8 +68,10 @@ import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
+import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.MAVD455DepthEstimator;
 import com.comino.mavodometry.estimators.MAVT265PositionEstimator;
+import com.comino.mavodometry.estimators.MAVWebCamNullEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
@@ -101,10 +104,9 @@ public class StartUp  {
 	private MSPCommander  commander = null;
 	private DataModel     model     = null;
 
-	private MAVT265PositionEstimator pose = null;
+	private MAVAbstractEstimator pose  = null;
+	private MAVAbstractEstimator depth = null;
 
-	private MAVD455DepthEstimator depth = null;
-	//	private MAVR200DepthEstimator depth = null;
 
 	private int mode;
 
@@ -118,8 +120,6 @@ public class StartUp  {
 
 	public StartUp(String[] args) {
 
-		//		new JetsonNanoInferenceTest();
-		
 
 		addShutdownHook();
 
@@ -172,12 +172,18 @@ public class StartUp  {
 
 		params = PX4Parameters.getInstance(control);
 
-		try { Thread.sleep(300); } catch(Exception e) { }
-
-
 
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
+
+		try { Thread.sleep(300); } catch(Exception e) { }
+
+		control.connect();
+
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {}
+
 
 		inflightCheck = new MSPInflightCheck(control, hw);
 		dispatcher = new MAVLinkDispatcher(control, config, hw);
@@ -187,7 +193,7 @@ public class StartUp  {
 
 
 		commander = new MSPCommander(control,config);
-		
+
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_CONNECTED, StatusManager.EDGE_RISING, (a) -> {
 			if(!model.sys.isStatus(Status.MSP_ARMED)) {
 				System.out.println("Setting up MAVLINK streams...");
@@ -227,7 +233,7 @@ public class StartUp  {
 								MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
 					} 
 				});
-		
+
 
 		// ?????
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_SERVICES,
@@ -240,123 +246,8 @@ public class StartUp  {
 
 		// Start services if required
 
-
 		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
-
-
-
-			//			streamer = new HttpMJPEGHandler<Planar<GrayU8>>(WIDTH,HEIGHT, control.getCurrentModel());
-			//			try {
-			//
-			//
-			//				final HttpServer server;
-			//
-			//				server = HttpServer.create(new InetSocketAddress(8080),1);
-			//				server.createContext("/mjpeg", (HttpMJPEGHandler<Planar<GrayU8>>)streamer);
-			//				//		server.setExecutor(ExecutorService.get()); // creates a default executor
-			//				server.start();
-			//
-			//				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-			//
-			//			} catch(Exception e) { System.out.println("! No vision stream available"); }
-
-			if(!control.isSimulation()) {
-
-				streamer = new RTSPMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
-				streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-				streamer.registerNoVideoListener(() -> {
-					if(pose!=null)  
-						pose.enableStream(true);  
-					else if(depth!=null) 
-						depth.enableStream(true);
-				});
-				try {
-					((RTSPMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			
-			}
-
-
-
-			//*** R200 Odometry, Mapping, Groundtruth via T265
-
-
-			//	vision = new MAVVisualPositionEstimatorVO(info, control, config, streamer);
-			//				vision = new MAVVisualPositionEstimatorVIO(info, control, config, streamer);
-			//				vision.registerDetector(new FwDirectDepthDetector(control,config,commander.getMap(),streamer));
-			//				pose = new StreamRealSensePose(control, StreamRealSensePose.GROUNDTRUTH_MODE, streamer);
-
-			//				if(vision!=null && !vision.isRunning()) {
-			//					vision.start();
-			//				    pose.start();
-			//				}
-
-
-			//*** T265 odometry
-
-
-			try {
-
-				pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
-				pose.start();
-
-			} catch(UnsatisfiedLinkError | Exception e ) {
-				System.out.println("! No pose estimation available");
-
-				if(!control.isSimulation())
-					e.printStackTrace();
-			}
-
-			//*** D455 depth
-
-			try {
-
-				depth = new MAVD455DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
-				depth.enableStream(true);
-				depth.start();
-
-
-			} catch(UnsatisfiedLinkError | Exception e ) {
-				System.out.println("! No depth estimation available");
-
-				if(!control.isSimulation())
-					e.printStackTrace();
-			}
-
-
-			//			//*** R200 Depth estimation
-			//
-			//			try {
-			//
-			//				depth = new MAVR200DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
-			//				depth.enableStream(true);
-			//				depth.start();
-			//
-			//			} catch(UnsatisfiedLinkError | Exception e ) {
-			//				System.out.println("! No depth estimation available");
-			//
-			//				if(!control.isSimulation())
-			//					e.printStackTrace();
-			//			}
-			//			//***********
-
-
-
-
-		}
-
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {}
-
-		control.connect();
-
-		if(depth!=null) {
-			depth.enableStream(true);
-			pose.enableStream(false);
+			startOdometry();
 		}
 
 
@@ -390,11 +281,11 @@ public class StartUp  {
 
 		// Send system time
 
-//		Instant ins = Instant.now();
-//		long now_ns = ins.getEpochSecond() * 1000000000L + ins.getNano();
-//		msg_system_time time     = new msg_system_time(1, 1);
-//		time.time_unix_usec = now_ns /1000L;
-//		control.sendMAVLinkMessage(time);
+		//		Instant ins = Instant.now();
+		//		long now_ns = ins.getEpochSecond() * 1000000000L + ins.getNano();
+		//		msg_system_time time     = new msg_system_time(1, 1);
+		//		time.time_unix_usec = now_ns /1000L;
+		//		control.sendMAVLinkMessage(time);
 
 		// Setup WorkQueues and start them
 
@@ -439,6 +330,82 @@ public class StartUp  {
 
 	}
 
+	private void startOdometry() {
+
+		if(!control.isSimulation()) {
+
+			streamer = new RTSPMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+			streamer.registerNoVideoListener(() -> {
+				if(pose!=null)  
+					pose.enableStream(true);  
+				else if(depth!=null) 
+					depth.enableStream(true);
+			});
+			try {
+				((RTSPMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
+		}
+
+		model.vision.setStatus(Vision.VIDEO_ENABLED, false);
+
+		try {
+
+			pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+			pose.start();
+			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+
+		} catch(UnsatisfiedLinkError | Exception e ) {
+			System.out.println("! No pose estimation available");
+
+			if(!control.isSimulation())
+				e.printStackTrace();
+		}
+
+		//*** WebCam as depth
+
+		//		if(!control.isSimulation()) {
+		
+					try {
+						depth = new MAVWebCamNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+						depth.start();
+		
+					} catch(UnsatisfiedLinkError | Exception e ) {
+						System.out.println("! No Webcam available");
+		
+						if(!control.isSimulation())
+							e.printStackTrace();
+					}
+		
+//				}
+
+//		try {
+//
+//			depth = new MAVD455DepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
+//			depth.enableStream(true);
+//			depth.start();
+//			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+//
+//
+//		} catch(UnsatisfiedLinkError | Exception e ) {
+//			System.out.println("! No depth estimation available");
+//
+//			if(!control.isSimulation())
+//				e.printStackTrace();
+//		}
+
+
+
+		if(depth!=null) {
+			depth.enableStream(true);
+			pose.enableStream(false);
+		}
+	}
+
 	private class initPX4 implements Runnable {
 
 
@@ -446,10 +413,6 @@ public class StartUp  {
 		public void run() {
 			if((mode==MAVController.MODE_NORMAL || mode==MAVController.MODE_USB)  && model.sys.isStatus(Status.MSP_CONNECTED)) {
 				System.out.println("Execute init PX4");
-				//control.sendShellCommand("dshot beep4");
-				//			control.sendShellCommand("sf1xx start -X");
-				
-
 
 				// enforce NUTTX RTC set to companion time
 				SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY");   
@@ -458,6 +421,7 @@ public class StartUp  {
 				control.sendShellCommand("date -s \""+s+"\"");
 				control.sendShellCommand("lightware_laser_i2c start -X");	
 				params.requestRefresh(false);
+
 			}	
 
 		}	
