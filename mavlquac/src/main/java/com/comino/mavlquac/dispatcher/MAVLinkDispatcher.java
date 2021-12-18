@@ -70,6 +70,8 @@ public class MAVLinkDispatcher  {
 	private boolean publish_microslam;
 	private boolean publish_microgrid;
 	private boolean publish_debug;
+	
+	private long    init_tms = System.currentTimeMillis();
 
 	// Rework using WorkQueue!
 	private final WorkQueue wq = WorkQueue.getInstance();
@@ -205,7 +207,10 @@ public class MAVLinkDispatcher  {
 			status.com_error = control.getErrorCount();
 			status.takeoff_ms = model.sys.t_takeoff_ms;
 			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
-			status.uptime_ms = model.sys.t_boot_ms;
+			if(model.sys.t_boot_ms > 0)
+			  status.uptime_ms = model.sys.t_boot_ms;
+			else
+			  status.uptime_ms = System.currentTimeMillis() - init_tms;
 			status.status = control.getCurrentModel().sys.getStatus();
 			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
 			status.setArch(hw.getArchName());
