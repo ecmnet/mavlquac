@@ -409,13 +409,15 @@ public class StartUp  {
 
 
 		if(pose!=null) {
-			depth.enableStream(false);
+			if(depth!=null) 
+				depth.enableStream(false);
 			pose.enableStream(true);
-		}
+		} 
 
 		if(depth!=null) {
 			depth.enableStream(true);
-			pose.enableStream(false);
+			if(pose!=null) 
+				pose.enableStream(false);
 		}
 	}
 
