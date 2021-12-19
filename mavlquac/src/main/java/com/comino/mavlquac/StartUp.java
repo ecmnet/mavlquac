@@ -70,6 +70,7 @@ import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVD4xxDepthEstimator;
+import com.comino.mavodometry.estimators.position.MAVSITLPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.estimators.simple.MAVWebCamNullEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
@@ -358,11 +359,17 @@ public class StartUp  {
 			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
 
 		} catch(UnsatisfiedLinkError | Exception e ) {
-			System.out.println("! No pose estimation available");
+			System.out.println("No T265 device found");
 
 			if(!control.isSimulation())
 				e.printStackTrace();
 		}
+
+
+		if(control.isSimulation() && pose == null) {
+			pose = new MAVSITLPositionEstimator(control);
+		}
+
 
 		//*** OAK-D as depth
 		if(depth==null) {
@@ -382,7 +389,7 @@ public class StartUp  {
 
 			} catch(UnsatisfiedLinkError | Exception e ) {
 				System.out.println("! No depth estimation available");
-                depth = null;
+				depth = null;
 				//if(!control.isSimulation())
 				e.printStackTrace();
 			}
