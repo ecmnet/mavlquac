@@ -388,10 +388,9 @@ public class StartUp  {
 				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
 
 			} catch(UnsatisfiedLinkError | Exception e ) {
-				System.out.println("! No depth estimation available");
-				depth = null;
-				//if(!control.isSimulation())
-				e.printStackTrace();
+				System.out.println("No D455 device found");
+				if(!control.isSimulation())
+					e.printStackTrace();
 			}
 		}
 
