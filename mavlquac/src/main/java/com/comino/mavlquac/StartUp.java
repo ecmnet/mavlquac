@@ -72,7 +72,7 @@ import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVD4xxDepthEstimator;
 import com.comino.mavodometry.estimators.position.MAVSITLPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
-import com.comino.mavodometry.estimators.simple.MAVWebCamNullEstimator;
+import com.comino.mavodometry.estimators.simple.MAVCameraNullEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
@@ -210,6 +210,7 @@ public class StartUp  {
 		// Set initial PX4 Parameters
 		control.getStatusManager().addListener(Status.MSP_PARAMS_LOADED, (n) -> {
 			if(n.isStatus(Status.MSP_PARAMS_LOADED) && !model.sys.isStatus(Status.MSP_ARMED)) {
+				
 				params.sendParameter("RTL_DESCEND_ALT", 1.0f);
 				params.sendParameter("RTL_RETURN_ALT", 1.0f);
 				params.sendParameter("NAV_MC_ALT_RAD", 0.05f);
@@ -399,13 +400,23 @@ public class StartUp  {
 
 		if(!control.isSimulation() && depth == null) {
 			try {
-				depth = new MAVWebCamNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+				depth = new MAVCameraNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
 				depth.start();
 
 			} catch(UnsatisfiedLinkError | Exception e ) {
 				System.out.println("! No Webcam available");
 			}
 		}
+		
+//		if(control.isSimulation() && depth == null) {
+//			try {
+//			depth = new MAVGazeboFpvNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+//			depth.start();
+//			depth.enableStream(true);
+//			} catch(UnsatisfiedLinkError | Exception e ) {
+//				System.out.println("! No FPV available");
+//			}
+//		}
 
 
 		if(pose!=null) {
