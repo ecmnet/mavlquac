@@ -72,7 +72,7 @@ import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVD4xxDepthEstimator;
 import com.comino.mavodometry.estimators.position.MAVSITLPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
-import com.comino.mavodometry.estimators.simple.MAVCameraNullEstimator;
+import com.comino.mavodometry.estimators.simple.MAVFPVCameraNullEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
@@ -81,7 +81,6 @@ import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
 
-import boofcv.BoofVersion;
 import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
 import boofcv.struct.image.Planar;
@@ -400,11 +399,11 @@ public class StartUp  {
 
 		if(!control.isSimulation() && depth == null) {
 			try {
-				depth = new MAVCameraNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+				depth = new MAVFPVCameraNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
 				depth.start();
 
 			} catch(UnsatisfiedLinkError | Exception e ) {
-				System.out.println("! No Webcam available");
+				System.out.println("! No FPV camera available");
 			}
 		}
 		
