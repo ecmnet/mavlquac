@@ -70,6 +70,7 @@ import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVD4xxDepthEstimator;
+import com.comino.mavodometry.estimators.position.MAVFlowPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVSITLPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.estimators.simple.MAVFPVCameraNullEstimator;
@@ -107,6 +108,7 @@ public class StartUp  {
 
 	private MAVAbstractEstimator pose  = null;
 	private MAVAbstractEstimator depth = null;
+	private MAVAbstractEstimator flow  = null;
 
 
 	private int mode;
@@ -133,8 +135,8 @@ public class StartUp  {
 		if(args.length != 0) {
 			if(args[0].contains("SIM"))
 				mode = MAVController.MODE_SITL;
-			else if(args[0].contains("SERVER"))
-				mode = MAVController.MODE_SERVER;
+//			else if(args[0].contains("SERVER"))
+//				mode = MAVController.MODE_SERVER;
 			else if(args[0].contains("USB"))
 				mode = MAVController.MODE_USB;
 			else if(args[0].contains("log")) {
@@ -156,13 +158,13 @@ public class StartUp  {
 
 			break;
 
-		case MAVController.MODE_SERVER:
-
-			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass()),"msp.properties");
-			control = new MAVProxyController(MAVController.MODE_SERVER);
-			System.out.println("MSPControlService (LQUAC JetsonNano) version "+config.getVersion()+" Mode = "+mode);
-			control.getCurrentModel().clear();
-			break;
+//		case MAVController.MODE_SERVER:
+//
+//			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass()),"msp.properties");
+//			control = new MAVProxyController(MAVController.MODE_SERVER);
+//			System.out.println("MSPControlService (LQUAC JetsonNano) version "+config.getVersion()+" Mode = "+mode);
+//			control.getCurrentModel().clear();
+//			break;
 
 		default:
 
@@ -251,6 +253,12 @@ public class StartUp  {
 		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
 			startOdometry();
 		}
+		
+//		flow = new MAVFlowPositionEstimator(control);
+//		try {
+//			flow.start();
+//		} catch (Exception e) {
+//		}
 
 
 		// Dispatch commands
