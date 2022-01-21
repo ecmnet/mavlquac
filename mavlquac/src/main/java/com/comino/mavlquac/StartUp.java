@@ -405,15 +405,15 @@ public class StartUp  {
 
 		//*** WebCam as depth
 
-		if(!control.isSimulation() && depth == null) {
-			try {
-				depth = new MAVFPVCameraNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
-				depth.start();
-
-			} catch(UnsatisfiedLinkError | Exception e ) {
-				System.out.println("! No FPV camera available");
-			}
-		}
+//		if(!control.isSimulation() && depth == null) {
+//			try {
+//				depth = new MAVFPVCameraNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+//				depth.start();
+//
+//			} catch(UnsatisfiedLinkError | Exception e ) {
+//				System.out.println("! No FPV camera available");
+//			}
+//		}
 		
 //		if(control.isSimulation() && depth == null) {
 //			try {
