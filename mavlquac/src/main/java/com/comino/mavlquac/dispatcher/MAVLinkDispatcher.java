@@ -70,7 +70,7 @@ public class MAVLinkDispatcher  {
 	private boolean publish_microslam;
 	private boolean publish_microgrid;
 	private boolean publish_debug;
-	
+
 	private long    init_tms = System.currentTimeMillis();
 
 	// Rework using WorkQueue!
@@ -92,14 +92,14 @@ public class MAVLinkDispatcher  {
 		this.publish_debug = config.getBoolProperty(MSPParams.PUBLISH_DEBUG, "true");
 		System.out.println("[vis] Publishing debug messages enabled: "+publish_debug);
 
-		wq.addCyclicTask("NP", 10,  new Dispatch_10ms());
+		wq.addCyclicTask("NP", 20,  new Dispatch_20ms());
 		wq.addCyclicTask("NP", 50,  new Dispatch_50ms());
 		wq.addCyclicTask("NP", 100, new Dispatch_100ms());
 		wq.addCyclicTask("NP", 200, new Dispatch_200ms());
 		wq.addCyclicTask("LP", 500, new Dispatch_500ms());
 	}
 
-	private class Dispatch_10ms implements Runnable {
+	private class Dispatch_20ms implements Runnable {
 		@Override
 		public void run() {
 
@@ -115,6 +115,16 @@ public class MAVLinkDispatcher  {
 					control.sendMAVLinkMessage(grid);
 				}
 			}
+
+			// Debug vector
+			if(publish_debug) {
+				debug.x = model.debug.x;
+				debug.y = model.debug.y;
+				debug.z = model.debug.z;
+				debug.time_usec = DataModel.getSynchronizedPX4Time_us();
+				control.sendMAVLinkMessage(debug);
+			}
+
 		}
 	}
 
@@ -122,13 +132,7 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
 
-			// Debug vector
-			if(publish_debug) {
-				debug.x = model.debug.x;
-				debug.y = model.debug.y;
-				debug.z = model.debug.z;
-				control.sendMAVLinkMessage(debug);
-			}
+
 
 		}
 	}
@@ -163,7 +167,7 @@ public class MAVLinkDispatcher  {
 			// Trajectory publishing	
 
 			if(model.slam.flags == Slam.OFFBOARD_FLAG_MOVE) {
-				
+
 				traj.ls = model.traj.ls;
 				traj.fs = model.traj.fs;
 
@@ -186,7 +190,7 @@ public class MAVLinkDispatcher  {
 				traj.tms = model.traj.tms;
 
 				control.sendMAVLinkMessage(traj);
-				
+
 			}
 
 		}
@@ -195,7 +199,7 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_200ms implements Runnable {
 		@Override
 		public void run() {
-
+			model.sys.setStatus(Status.MSP_ACTIVE,true);
 			model.sys.wifi_quality = hw.getWifiQuality()/100f;
 
 			status.load = hw.getCPULoad();
@@ -208,9 +212,9 @@ public class MAVLinkDispatcher  {
 			status.takeoff_ms = model.sys.t_takeoff_ms;
 			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
 			if(model.sys.t_boot_ms > 0)
-			  status.uptime_ms = model.sys.t_boot_ms;
+				status.uptime_ms = model.sys.t_boot_ms;
 			else
-			  status.uptime_ms = System.currentTimeMillis() - init_tms;
+				status.uptime_ms = System.currentTimeMillis() - init_tms;
 			status.status = control.getCurrentModel().sys.getStatus();
 			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
 			status.setArch(hw.getArchName());
