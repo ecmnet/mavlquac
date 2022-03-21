@@ -112,6 +112,7 @@ public class MAVLinkDispatcher  {
 					grid.cz  = model.grid.iz;
 					grid.tms = DataModel.getSynchronizedPX4Time_us();
 					grid.count = model.grid.count;
+					grid.resolution = model.grid.resolution;
 					control.sendMAVLinkMessage(grid);
 				}
 			}
@@ -199,6 +200,7 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_200ms implements Runnable {
 		@Override
 		public void run() {
+			
 			model.sys.setStatus(Status.MSP_ACTIVE,true);
 			model.sys.wifi_quality = hw.getWifiQuality()/100f;
 
@@ -220,6 +222,7 @@ public class MAVLinkDispatcher  {
 			status.setArch(hw.getArchName());
 			status.unix_time_us = DataModel.getUnixTime_us();
 			control.sendMAVLinkMessage(status);
+			
 
 		}
 	}
