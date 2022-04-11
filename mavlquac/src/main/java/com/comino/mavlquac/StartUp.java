@@ -40,7 +40,6 @@ import java.io.PrintStream;
 import java.net.URLDecoder;
 import java.security.CodeSource;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -49,7 +48,6 @@ import org.mavlink.messages.MAV_CMD;
 import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
-import org.mavlink.messages.lquac.msg_system_time;
 
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
@@ -69,15 +67,12 @@ import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
-import com.comino.mavodometry.estimators.depth.MAVD4xxDepthEstimator;
-import com.comino.mavodometry.estimators.position.MAVFlowPositionEstimator;
-import com.comino.mavodometry.estimators.position.MAVSITLPositionEstimator;
+import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
+import com.comino.mavodometry.estimators.depth.MAVSimDepthSegmentEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
-import com.comino.mavodometry.estimators.simple.MAVFPVCameraNullEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
-
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
@@ -128,15 +123,16 @@ public class StartUp  {
 
 		this.hw = HardwareAbstraction.instance();
 
-		BoofConcurrency.setMaxThreads(2);
+		BoofConcurrency.setMaxThreads(4);
+	//	BoofConcurrency.USE_CONCURRENT = false;
 
 		ExecutorService.create();
 
 		if(args.length != 0) {
 			if(args[0].contains("SIM"))
 				mode = MAVController.MODE_SITL;
-//			else if(args[0].contains("SERVER"))
-//				mode = MAVController.MODE_SERVER;
+			//			else if(args[0].contains("SERVER"))
+			//				mode = MAVController.MODE_SERVER;
 			else if(args[0].contains("USB"))
 				mode = MAVController.MODE_USB;
 			else if(args[0].contains("log")) {
@@ -158,13 +154,13 @@ public class StartUp  {
 
 			break;
 
-//		case MAVController.MODE_SERVER:
-//
-//			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass()),"msp.properties");
-//			control = new MAVProxyController(MAVController.MODE_SERVER);
-//			System.out.println("MSPControlService (LQUAC JetsonNano) version "+config.getVersion()+" Mode = "+mode);
-//			control.getCurrentModel().clear();
-//			break;
+			//		case MAVController.MODE_SERVER:
+			//
+			//			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass()),"msp.properties");
+			//			control = new MAVProxyController(MAVController.MODE_SERVER);
+			//			System.out.println("MSPControlService (LQUAC JetsonNano) version "+config.getVersion()+" Mode = "+mode);
+			//			control.getCurrentModel().clear();
+			//			break;
 
 		default:
 
@@ -211,7 +207,7 @@ public class StartUp  {
 		// Set initial PX4 Parameters
 		control.getStatusManager().addListener(Status.MSP_PARAMS_LOADED, (n) -> {
 			if(n.isStatus(Status.MSP_PARAMS_LOADED) && !model.sys.isStatus(Status.MSP_ARMED)) {
-				
+
 				params.sendParameter("RTL_DESCEND_ALT", 1.0f);
 				params.sendParameter("RTL_RETURN_ALT", 1.0f);
 				params.sendParameter("NAV_MC_ALT_RAD", 0.05f);
@@ -250,15 +246,11 @@ public class StartUp  {
 
 		// Start services if required
 
-		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
-			startOdometry();
-		}
-		
-//		flow = new MAVFlowPositionEstimator(control);
-//		try {
-//			flow.start();
-//		} catch (Exception e) {
-//		}
+		//		flow = new MAVFlowPositionEstimator(control);
+		//		try {
+		//			flow.start();
+		//		} catch (Exception e) {
+		//		}
 
 
 		// Dispatch commands
@@ -305,15 +297,24 @@ public class StartUp  {
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
 		wq.addCyclicTask("LP", 500,  inflightCheck);
-		wq.addSingleTask("LP", 100, new initPX4());
+		wq.addSingleTask("LP", 100,  new initPX4());
 
 		wq.start();
+		
+		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
+			startOdometry();
+		}
 
 	}
 
 
 	public static void main(String[] args)  {
+		System.setProperty("sun.java2d.opengl", "false");
+		System.setProperty("sun.java2d.xrender", "false");
+//		System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
+//		System.setProperty("org.bytedeco.javacpp.nopointergc", "true");
 
+		
 		new StartUp(args);
 
 	}
@@ -368,62 +369,92 @@ public class StartUp  {
 
 		} catch(UnsatisfiedLinkError | Exception e ) {
 			System.out.println("No T265 device found");
-
-			if(!control.isSimulation())
-				e.printStackTrace();
 		}
 
 
-		if(control.isSimulation() && pose == null) {
-			pose = new MAVSITLPositionEstimator(control);
-		}
+//		if(control.isSimulation() && pose == null) {
+//			pose = new MAVSITLPositionEstimator(control);
+//		}
 
 
 		//*** OAK-D as depth
 		if(depth==null) {
-
-			// TODO
-
-		}
-
-		//*** D4xx as depth
-
-		if(depth==null) {
 			try {
-
-				depth = new MAVD4xxDepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
+//				depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+				depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
 				depth.start();
 				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
 
-			} catch(UnsatisfiedLinkError | Exception e ) {
-				System.out.println("No D455 device found");
+			} catch (Exception e) {
 				if(!control.isSimulation())
-					e.printStackTrace();
+				  e.printStackTrace();
+				depth=null;
+				System.out.println("No OAKD-Lite device found");
 			}
+
 		}
+		
+		if(depth==null && control.isSimulation()) {
+			try {
+				depth = new MAVSimDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+				depth.start();
+				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+
+			} catch (Exception e) {
+				System.out.println("No depth simulation found");
+			}
+
+		}
+		
+		
+		//*** OAK-D as simple Camera
+//		if(depth==null) {
+//			try {
+//				depth = new MAVOAKDCamEstimator(control,config, WIDTH,HEIGHT, streamer);
+//				depth.start();
+//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+//
+//			} catch (Exception e) {
+//				System.out.println("No OAKD-Lite device found");
+//			}
+//
+//		}
+
+		//*** D4xx as depth
+
+//		if(depth==null) {
+//			try {
+//				depth = new MAVD4xxDepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
+//				depth.start();
+//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+//
+//			} catch(UnsatisfiedLinkError | Exception e ) {
+//				System.out.println("No D455 device found");
+//			}
+//		}
 
 
 		//*** WebCam as depth
 
-//		if(!control.isSimulation() && depth == null) {
-//			try {
-//				depth = new MAVFPVCameraNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
-//				depth.start();
-//
-//			} catch(UnsatisfiedLinkError | Exception e ) {
-//				System.out.println("! No FPV camera available");
-//			}
-//		}
-		
-//		if(control.isSimulation() && depth == null) {
-//			try {
-//			depth = new MAVGazeboFpvNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
-//			depth.start();
-//			depth.enableStream(true);
-//			} catch(UnsatisfiedLinkError | Exception e ) {
-//				System.out.println("! No FPV available");
-//			}
-//		}
+		//		if(!control.isSimulation() && depth == null) {
+		//			try {
+		//				depth = new MAVFPVCameraNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+		//				depth.start();
+		//
+		//			} catch(UnsatisfiedLinkError | Exception e ) {
+		//				System.out.println("! No FPV camera available");
+		//			}
+		//		}
+
+		//		if(control.isSimulation() && depth == null) {
+		//			try {
+		//			depth = new MAVGazeboFpvNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+		//			depth.start();
+		//			depth.enableStream(true);
+		//			} catch(UnsatisfiedLinkError | Exception e ) {
+		//				System.out.println("! No FPV available");
+		//			}
+		//		}
 
 
 		if(pose!=null) {
