@@ -61,14 +61,12 @@ public class MAVLinkDispatcher  {
 
 	private final HardwareAbstraction hw;
 
-	private final msg_msp_micro_grid  grid     = new msg_msp_micro_grid(2,1);
 	private final msg_msp_status      status   = new msg_msp_status(2,1);
 	private final msg_debug_vect      debug    = new msg_debug_vect(2,1);
 	private final msg_msp_micro_slam  slam     = new msg_msp_micro_slam(2,1);
 	private final msg_msp_trajectory  traj 	   = new msg_msp_trajectory(2,1);
 
 	private boolean publish_microslam;
-	private boolean publish_microgrid;
 	private boolean publish_debug;
 
 	private long    init_tms = System.currentTimeMillis();
@@ -82,9 +80,6 @@ public class MAVLinkDispatcher  {
 		this.control = control;
 		this.config  = config;
 		this.hw      = hw;
-
-		this.publish_microgrid = config.getBoolProperty(MSPParams.PUBLISH_MICROGRID, "true");
-		System.out.println("[vis] Publishing microGrid enabled: "+publish_microgrid);
 
 		this.publish_microslam = config.getBoolProperty(MSPParams.PUBLISH_MICROSLAM, "true");
 		System.out.println("[vis] Publishing microSlam enabled: "+publish_microslam);
@@ -102,20 +97,6 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_20ms implements Runnable {
 		@Override
 		public void run() {
-
-
-			// Publish grid
-			if(publish_microgrid && model.grid.hasTransfers()) {
-				if(model.grid.toArray(grid.data)) {
-					grid.cx  = model.grid.ix;
-					grid.cy  = model.grid.iy;
-					grid.cz  = model.grid.iz;
-					grid.tms = DataModel.getSynchronizedPX4Time_us();
-					grid.count = model.grid.count;
-					grid.resolution = model.grid.resolution;
-					control.sendMAVLinkMessage(grid);
-				}
-			}
 
 			// Debug vector
 			if(publish_debug) {
