@@ -68,6 +68,7 @@ import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
+import com.comino.mavodometry.estimators.depth.MAVOAKDDepthSegmentEstimator;
 import com.comino.mavodometry.estimators.depth.MAVSimDepthSegmentEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
@@ -380,8 +381,8 @@ public class StartUp  {
 		//*** OAK-D as depth
 		if(depth==null) {
 			try {
-//				depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-				depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+	//			depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+				depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer); 
 				depth.start();
 				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
 
