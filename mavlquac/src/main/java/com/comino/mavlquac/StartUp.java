@@ -41,6 +41,7 @@ import java.net.URLDecoder;
 import java.security.CodeSource;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import org.mavlink.messages.IMAVLinkMessageID;
@@ -395,17 +396,17 @@ public class StartUp  {
 
 		}
 		
-		if(depth==null && control.isSimulation()) {
-			try {
-				depth = new MAVSimDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-				depth.start();
-				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-
-			} catch (Exception e) {
-				System.out.println("No depth simulation found");
-			}
-
-		}
+//		if(depth==null && control.isSimulation()) {
+//			try {
+//				depth = new MAVSimDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+//				depth.start();
+//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+//
+//			} catch (Exception e) {
+//				System.out.println("No depth simulation found");
+//			}
+//
+//		}
 		
 		
 		//*** OAK-D as simple Camera
@@ -480,7 +481,7 @@ public class StartUp  {
 				System.out.println("Execute init PX4");
 
 				// enforce NUTTX RTC set to companion time
-				SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY");   
+				SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm:ss YYYY", Locale.ENGLISH);   
 				sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 				String s = sdf.format(new Date());
 				control.sendShellCommand("date -s \""+s+"\"");
