@@ -102,7 +102,7 @@ public class MSPInflightCheck implements Runnable {
 			return OK;
 
 		// Set to init phase until CV is initialized the first time
-		if(model.sys.t_boot_ms < 20000 && !model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
+		if(model.sys.t_boot_ms < 30000 && !model.sys.isSensorAvailable(Status.MSP_OPCV_AVAILABILITY)) {
 			reset();
 			return INIT;
 		}
@@ -146,8 +146,10 @@ public class MSPInflightCheck implements Runnable {
 			lastMessage_tms = System.currentTimeMillis();
 			control.writeLogMessage(new LogMessage(message,level));	
 		}
-		if(warnLevel > WARN)
+		if(warnLevel > WARN) {
+			System.out.println("Inflight check: Not ready for flight");
 			model.sys.setStatus(Status.MSP_READY_FOR_FLIGHT, false);
+		}
 	}
 
 }

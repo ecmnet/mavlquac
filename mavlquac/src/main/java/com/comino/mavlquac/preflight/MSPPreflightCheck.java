@@ -102,8 +102,8 @@ public class MSPPreflightCheck {
         if(!model.sys.isStatus(Status.MSP_LPOS_VALID))
      		checkFailed("[msp] LPOS not available", FAILED);
         
-        if(Math.abs(model.state.l_z) > 0.3)
-        	checkFailed("[msp] Local position not on ground", WARN);
+//        if(Math.abs(model.state.l_z) > 0.3)
+//        	checkFailed("[msp] Local position not on ground", WARN);
 
         // Is GPOS available
         if(!model.sys.isStatus(Status.MSP_GPOS_VALID))
@@ -117,9 +117,9 @@ public class MSPPreflightCheck {
      	if(!model.sys.isSensorAvailable(Status.MSP_IMU_AVAILABILITY))
      		checkFailed("[msp] IMU not available", FAILED);
 
-        // Check if kill switch is disabled
-        if(params.getParam("CBRK_IO_SAFETY")!=null && params.getParam("CBRK_IO_SAFETY").value != 0)
-     		checkFailed("[msp] IO SafetyBreaker set", INFO);
+//        // Check if kill switch is disabled
+//        if(params.getParam("CBRK_IO_SAFETY")!=null && params.getParam("CBRK_IO_SAFETY").value != 0)
+//     		checkFailed("[msp] IO SafetyBreaker set", INFO);
 
         // Check if RTL altitude is set
      	if(params.getParam("RTL_RETURN_ALT")!=null && params.getParam("RTL_RETURN_ALT").value != 1.0)
@@ -131,6 +131,7 @@ public class MSPPreflightCheck {
      		
 
      	// ...more
+     	
 
 		return maxLevel;
 	}
