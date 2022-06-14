@@ -119,6 +119,8 @@ public class StartUp  {
 
 
 	public StartUp(String[] args) {
+		
+//		System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
 
 
 		addShutdownHook();
