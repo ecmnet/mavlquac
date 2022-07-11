@@ -82,6 +82,7 @@ import com.comino.mavutils.workqueue.WorkQueue;
 import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
 import boofcv.struct.image.Planar;
+import sample.SampleJpeg;
 
 public class StartUp  {
 
@@ -120,7 +121,10 @@ public class StartUp  {
 
 	public StartUp(String[] args) {
 		
-//		System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
+		//System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
+		
+		// NVJPEG CUDA TEST
+		//SampleJpeg.test();
 
 
 		addShutdownHook();
@@ -200,9 +204,9 @@ public class StartUp  {
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_CONNECTED, StatusManager.EDGE_RISING, (a) -> {
 			if(!model.sys.isStatus(Status.MSP_ARMED)) {
 				System.out.println("Setting up MAVLINK streams...");
+				// Note: Interval is in us
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);			
-				//	control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_STATUS,100);
-				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,0);
+				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,100000);
 				params.requestRefresh(true);
 			}
 		});
