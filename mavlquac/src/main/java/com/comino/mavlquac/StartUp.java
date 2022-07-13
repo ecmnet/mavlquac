@@ -71,6 +71,7 @@ import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthSegmentEstimator;
 import com.comino.mavodometry.estimators.depth.MAVSimDepthSegmentEstimator;
+import com.comino.mavodometry.estimators.position.MAVGazeboVisPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
@@ -380,9 +381,15 @@ public class StartUp  {
 		}
 
 
-//		if(control.isSimulation() && pose == null) {
-//			pose = new MAVSITLPositionEstimator(control);
-//		}
+		if(pose == null && control.isSimulation()) {
+			try {
+			pose = new MAVGazeboVisPositionEstimator(control);
+			pose.start();
+			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+			} catch(UnsatisfiedLinkError | Exception e ) {
+				System.out.println("Gazebo vision plugin could not be started");
+			}
+		}
 
 
 		//*** OAK-D as depth
