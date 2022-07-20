@@ -76,6 +76,7 @@ import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
+import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamMjpegHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
@@ -100,7 +101,7 @@ public class StartUp  {
 	MSPConfig	          config    = null;
 	MAVLinkDispatcher    dispatcher = null;
 
-	private IVisualStreamHandler<Planar<GrayU8>> streamer = null;
+	private RTSPMultiStreamMjpegHandler<Planar<GrayU8>> streamer = null;
 
 	private MSPCommander  commander = null;
 	private DataModel     model     = null;
@@ -274,12 +275,10 @@ public class StartUp  {
 				case MSP_CMD.SELECT_VIDEO_STREAM:
 					switch((int)cmd.param1) {
 					case 1:
-						if(pose!=null)  pose.enableStream(true);  
-						if(depth!=null) depth.enableStream(false);
+						streamer.enableStream("DOWN");
 						break;
 					case 0:
-						if(depth!=null) depth.enableStream(true);
-						if(pose!=null)  pose.enableStream(false);
+						streamer.enableStream("RGB");
 						break;
 					}
 					break;
@@ -352,7 +351,7 @@ public class StartUp  {
 
 	private void startOdometry() {
 
-		streamer = new RTSPMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
 		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
 		streamer.registerNoVideoListener(() -> {
 			if(pose!=null)  
@@ -361,7 +360,7 @@ public class StartUp  {
 				depth.enableStream(true);
 		});
 		try {
-			((RTSPMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
+			((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
 		} catch (Exception e1) {
 			// TODO Auto-generated catch block
 			if(!control.isSimulation())
@@ -374,6 +373,7 @@ public class StartUp  {
 
 			pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
 			pose.start();
+			pose.enableStream(true);
 			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
 
 		} catch(UnsatisfiedLinkError | Exception e ) {
@@ -398,6 +398,7 @@ public class StartUp  {
 	//			depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
 				depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer); 
 				depth.start();
+				depth.enableStream(true);
 				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
 
 			} catch (Exception e) {
@@ -473,15 +474,11 @@ public class StartUp  {
 
 
 		if(pose!=null) {
-			if(depth!=null) 
-				depth.enableStream(false);
-			pose.enableStream(true);
+			streamer.enableStream("DOWN");
 		} 
 
 		if(depth!=null) {
-			depth.enableStream(true);
-			if(pose!=null) 
-				pose.enableStream(false);
+			streamer.enableStream("RGB");
 		}
 	}
 
