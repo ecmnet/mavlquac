@@ -281,12 +281,9 @@ public class StartUp  {
 						streamer.enableStream("DOWN");
 						break;
 					case 2:
-						streamer.enableStream("DEPTH");
+						streamer.enableStream("DEPTH+RGB");
 						break;
 					case 3:
-						streamer.enableStream("RGB+DEPTH"); 
-						break;
-					case 4:
 						streamer.enableStream("RGB"); 
 						break;
 					
