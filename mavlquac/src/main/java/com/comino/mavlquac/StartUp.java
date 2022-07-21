@@ -274,12 +274,22 @@ public class StartUp  {
 					break;
 				case MSP_CMD.SELECT_VIDEO_STREAM:
 					switch((int)cmd.param1) {
+					case 0:
+						streamer.enableStream("RGB+DOWN");
+						break;
 					case 1:
 						streamer.enableStream("DOWN");
 						break;
-					case 0:
-						streamer.enableStream("RGB");
+					case 2:
+						streamer.enableStream("DEPTH");
 						break;
+					case 3:
+						streamer.enableStream("RGB+DEPTH"); 
+						break;
+					case 4:
+						streamer.enableStream("RGB"); 
+						break;
+					
 					}
 					break;
 				}
@@ -478,7 +488,11 @@ public class StartUp  {
 		} 
 
 		if(depth!=null) {
-			streamer.enableStream("RGB");
+			streamer.enableStream("RGB+DEPTH");
+		}
+		
+		if(depth!=null && pose!=null) {
+			streamer.enableStream("RGB+DOWN");
 		}
 	}
 
