@@ -278,7 +278,7 @@ public class StartUp  {
 						streamer.enableStream("RGB+DOWN");
 						break;
 					case 1:
-						streamer.enableStream("DOWN");
+						streamer.enableStream("DOWN+RGB");
 						break;
 					case 2:
 						streamer.enableStream("DEPTH+RGB");
@@ -286,6 +286,8 @@ public class StartUp  {
 					case 3:
 						streamer.enableStream("RGB"); 
 						break;
+					case 4:
+						streamer.enableStream("DOWN");
 					
 					}
 					break;
@@ -490,6 +492,7 @@ public class StartUp  {
 		
 		if(depth!=null && pose!=null) {
 			streamer.enableStream("RGB+DOWN");
+			streamer.enableStream("DOWN+RGB");
 		}
 	}
 
