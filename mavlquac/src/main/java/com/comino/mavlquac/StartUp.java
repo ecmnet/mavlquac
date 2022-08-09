@@ -482,17 +482,17 @@ public class StartUp  {
 		//			}
 		//		}
 
-		if(depth!=null && pose!=null) {
-			streamer.enableStream("RGB+DOWN");
-		} else
-
-		if(pose!=null && depth == null) {
-			streamer.enableStream("DOWN");
-		} else
-
-		if(depth!=null && pose == null) {
-			streamer.enableStream("RGB+DEPTH");
-		}
+//		if(depth!=null && pose!=null) {
+//			streamer.enableStream("RGB+DOWN");
+//		} else
+//
+//		if(pose!=null && depth == null) {
+//			streamer.enableStream("DOWN");
+//		} else
+//
+//		if(depth!=null && pose == null) {
+//			streamer.enableStream("RGB+DEPTH");
+//		}
 		
 		
 	}
