@@ -76,6 +76,7 @@ import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
+
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamMjpegHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
@@ -481,19 +482,19 @@ public class StartUp  {
 		//			}
 		//		}
 
+		if(depth!=null && pose!=null) {
+			streamer.enableStream("RGB+DOWN");
+		} else
 
-		if(pose!=null) {
+		if(pose!=null && depth == null) {
 			streamer.enableStream("DOWN");
-		} 
+		} else
 
-		if(depth!=null) {
+		if(depth!=null && pose == null) {
 			streamer.enableStream("RGB+DEPTH");
 		}
 		
-		if(depth!=null && pose!=null) {
-			streamer.enableStream("RGB+DOWN");
-			streamer.enableStream("DOWN+RGB");
-		}
+		
 	}
 
 	private class initPX4 implements Runnable {
