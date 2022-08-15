@@ -114,18 +114,9 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
 
-
-
-		}
-	}
-
-
-	private class Dispatch_100ms implements Runnable {
-		@Override
-		public void run() {
-
 			// Publish SLAM data
 			if(publish_microslam && ( model.slam.fps > 0 || control.isSimulation())) {
+
 				slam.pd = model.slam.pd;
 				slam.pp = model.slam.pp;
 				slam.pv = model.slam.pv;
@@ -138,6 +129,11 @@ public class MAVLinkDispatcher  {
 				slam.ox = model.slam.ox;
 				slam.oy = model.slam.oy;
 				slam.oz = model.slam.oz;
+
+				slam.cx = model.state.l_rx;
+				slam.cy = model.state.l_ry;
+				slam.cz = model.state.l_rz;
+
 				slam.quality = model.slam.quality;
 				slam.wpcount = model.slam.wpcount;
 				slam.flags = model.slam.flags;
@@ -145,6 +141,14 @@ public class MAVLinkDispatcher  {
 				slam.tms = model.slam.tms;
 				control.sendMAVLinkMessage(slam);
 			}
+		}
+	}
+
+
+	private class Dispatch_100ms implements Runnable {
+		@Override
+		public void run() {
+
 
 			// Trajectory publishing	
 
@@ -181,7 +185,7 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_200ms implements Runnable {
 		@Override
 		public void run() {
-			
+
 			model.sys.setStatus(Status.MSP_ACTIVE,true);
 			model.sys.wifi_quality = hw.getWifiQuality()/100f;
 
@@ -203,7 +207,7 @@ public class MAVLinkDispatcher  {
 			status.setArch(hw.getArchName());
 			status.unix_time_us = DataModel.getUnixTime_us();
 			control.sendMAVLinkMessage(status);
-			
+
 
 		}
 	}
