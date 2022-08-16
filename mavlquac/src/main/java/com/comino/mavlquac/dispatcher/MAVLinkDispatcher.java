@@ -120,13 +120,13 @@ public class MAVLinkDispatcher  {
 			}
 
 			// Send Local position corrected message to GC
-
-			lposc.cx  = model.state.l_rx;
-			lposc.cy  = model.state.l_ry;
-			lposc.cz  = model.state.l_rz;
-			lposc.tms = DataModel.getSynchronizedPX4Time_us();
-
-			control.sendMAVLinkMessage(lposc);
+			if(model.state.l_rx != 0 || model.state.l_ry != 0 || model.state.l_rz != 0) {
+				lposc.cx  = model.state.l_rx;
+				lposc.cy  = model.state.l_ry;
+				lposc.cz  = model.state.l_rz;
+				lposc.tms = DataModel.getSynchronizedPX4Time_us();
+				control.sendMAVLinkMessage(lposc);
+			}
 
 		}
 	}
