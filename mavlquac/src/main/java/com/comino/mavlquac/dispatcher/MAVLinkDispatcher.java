@@ -36,6 +36,7 @@ package com.comino.mavlquac.dispatcher;
 import java.time.Instant;
 
 import org.mavlink.messages.lquac.msg_debug_vect;
+import org.mavlink.messages.lquac.msg_msp_local_position_corrected;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_micro_slam;
 import org.mavlink.messages.lquac.msg_msp_status;
@@ -61,10 +62,11 @@ public class MAVLinkDispatcher  {
 
 	private final HardwareAbstraction hw;
 
-	private final msg_msp_status      status   = new msg_msp_status(2,1);
-	private final msg_debug_vect      debug    = new msg_debug_vect(2,1);
-	private final msg_msp_micro_slam  slam     = new msg_msp_micro_slam(2,1);
-	private final msg_msp_trajectory  traj 	   = new msg_msp_trajectory(2,1);
+	private final msg_msp_status      				status   = new msg_msp_status(2,1);
+	private final msg_debug_vect      				debug    = new msg_debug_vect(2,1);
+	private final msg_msp_micro_slam  				slam     = new msg_msp_micro_slam(2,1);
+	private final msg_msp_trajectory                traj 	 = new msg_msp_trajectory(2,1);
+	private final msg_msp_local_position_corrected  lposc 	 = new msg_msp_local_position_corrected(2,1);
 
 	private boolean publish_microslam;
 	private boolean publish_debug;
@@ -107,6 +109,33 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
 
+
+			// Debug vector
+			if(publish_debug && (model.debug.x != 0 || model.debug.y != 0 || model.debug.z != 0)) {
+				debug.x = model.debug.x;
+				debug.y = model.debug.y;
+				debug.z = model.debug.z;
+				debug.time_usec = DataModel.getSynchronizedPX4Time_us();
+				control.sendMAVLinkMessage(debug);
+			}
+
+			// Send Local position corrected message to GC
+
+			lposc.cx  = model.state.l_rx;
+			lposc.cy  = model.state.l_ry;
+			lposc.cz  = model.state.l_rz;
+			lposc.tms = DataModel.getSynchronizedPX4Time_us();
+
+			control.sendMAVLinkMessage(lposc);
+
+		}
+	}
+
+
+	private class Dispatch_100ms implements Runnable {
+		@Override
+		public void run() {
+
 			// Publish SLAM data
 			if(publish_microslam && ( model.slam.fps > 0 || control.isSimulation())) {
 
@@ -123,10 +152,6 @@ public class MAVLinkDispatcher  {
 				slam.oy = model.slam.oy;
 				slam.oz = model.slam.oz;
 
-				slam.cx = model.state.l_rx;
-				slam.cy = model.state.l_ry;
-				slam.cz = model.state.l_rz;
-
 				slam.quality = model.slam.quality;
 				slam.wpcount = model.slam.wpcount;
 				slam.flags = model.slam.flags;
@@ -135,21 +160,6 @@ public class MAVLinkDispatcher  {
 				control.sendMAVLinkMessage(slam);
 			}
 
-			// Debug vector
-			if(publish_debug && (model.debug.x != 0 || model.debug.y != 0 || model.debug.z != 0)) {
-				debug.x = model.debug.x;
-				debug.y = model.debug.y;
-				debug.z = model.debug.z;
-				debug.time_usec = DataModel.getSynchronizedPX4Time_us();
-				control.sendMAVLinkMessage(debug);
-			}
-		}
-	}
-
-
-	private class Dispatch_100ms implements Runnable {
-		@Override
-		public void run() {
 
 
 			// Trajectory publishing	
