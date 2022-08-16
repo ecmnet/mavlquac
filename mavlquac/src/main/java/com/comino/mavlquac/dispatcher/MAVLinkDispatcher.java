@@ -98,14 +98,7 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
 
-			// Debug vector
-			if(publish_debug) {
-				debug.x = model.debug.x;
-				debug.y = model.debug.y;
-				debug.z = model.debug.z;
-				debug.time_usec = DataModel.getSynchronizedPX4Time_us();
-				control.sendMAVLinkMessage(debug);
-			}
+
 
 		}
 	}
@@ -140,6 +133,15 @@ public class MAVLinkDispatcher  {
 				slam.fps = model.slam.fps;
 				slam.tms = model.slam.tms;
 				control.sendMAVLinkMessage(slam);
+			}
+
+			// Debug vector
+			if(publish_debug && (model.debug.x != 0 || model.debug.y != 0 || model.debug.z != 0)) {
+				debug.x = model.debug.x;
+				debug.y = model.debug.y;
+				debug.z = model.debug.z;
+				debug.time_usec = DataModel.getSynchronizedPX4Time_us();
+				control.sendMAVLinkMessage(debug);
 			}
 		}
 	}
