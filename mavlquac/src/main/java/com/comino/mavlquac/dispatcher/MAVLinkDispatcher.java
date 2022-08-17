@@ -125,6 +125,9 @@ public class MAVLinkDispatcher  {
 				lposc.cx      = model.state.l_rx;
 				lposc.cy      = model.state.l_ry;
 				lposc.cz      = model.state.l_rz;
+				lposc.gx      = model.vision.gx;
+				lposc.gy      = model.vision.gy;
+				lposc.gz      = model.vision.gz;
 				lposc.tms     = DataModel.getSynchronizedPX4Time_us();
 				control.sendMAVLinkMessage(lposc);
 			}
