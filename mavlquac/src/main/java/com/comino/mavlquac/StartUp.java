@@ -175,7 +175,7 @@ public class StartUp  {
 
 		default:
 
-			config  = MSPConfig.getInstance(System.getProperty("user.home")+"/","msp.properties");
+			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass())+"/../properties/","msp.properties");
 			control = new MAVProxyController(mode);
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
