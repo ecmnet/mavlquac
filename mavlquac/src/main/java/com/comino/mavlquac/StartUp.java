@@ -160,7 +160,7 @@ public class StartUp  {
 		case  MAVController.MODE_NORMAL:
 
 			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass()),"msp.properties");
-			control = new MAVProxyController(MAVController.MODE_NORMAL);
+			control = new MAVProxyController(MAVController.MODE_NORMAL,config);
 			System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
 			break;
@@ -176,7 +176,7 @@ public class StartUp  {
 		default:
 
 			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass())+"/../properties/","msp.properties");
-			control = new MAVProxyController(mode);
+			control = new MAVProxyController(mode, config);
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
 
