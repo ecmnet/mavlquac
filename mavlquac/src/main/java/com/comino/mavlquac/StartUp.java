@@ -123,9 +123,9 @@ public class StartUp  {
 
 
 	public StartUp(String[] args) {
-		
+
 		//System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
-		
+
 		// NVJPEG CUDA TEST
 		//SampleJpeg.test();
 
@@ -135,7 +135,7 @@ public class StartUp  {
 		this.hw = HardwareAbstraction.instance();
 
 		BoofConcurrency.setMaxThreads(4);
-	//	BoofConcurrency.USE_CONCURRENT = false;
+		//	BoofConcurrency.USE_CONCURRENT = false;
 
 		ExecutorService.create();
 
@@ -264,39 +264,6 @@ public class StartUp  {
 		//		}
 
 
-		// Dispatch commands
-		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
-			@Override
-			public void received(Object o) {
-				msg_msp_command cmd = (msg_msp_command)o;
-				switch(cmd.command) {
-				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
-					commander.getAutopilot().invalidate_map_transfer();
-					break;
-				case MSP_CMD.SELECT_VIDEO_STREAM:
-					switch((int)cmd.param1) {
-					case 0:
-						streamer.enableStream("RGB+DOWN");
-						break;
-					case 1:
-						streamer.enableStream("DOWN+RGB");
-						break;
-					case 2:
-						streamer.enableStream("DEPTH+RGB");
-						break;
-					case 3:
-						streamer.enableStream("RGB"); 
-						break;
-					case 4:
-						streamer.enableStream("DOWN");
-					
-					}
-					break;
-				}
-			}
-		});
-
-
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
 		// Send system time
@@ -318,10 +285,46 @@ public class StartUp  {
 		wq.addSingleTask("LP", 100,  new initPX4());
 
 		wq.start();
-		
+
 		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
 			startOdometry();
 		}
+
+		// Dispatch commands
+		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
+			@Override
+			public void received(Object o) {
+
+
+				msg_msp_command cmd = (msg_msp_command)o;
+				switch(cmd.command) {
+				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
+					commander.getAutopilot().invalidate_map_transfer();
+					break;
+				case MSP_CMD.SELECT_VIDEO_STREAM:
+					switch((int)cmd.param1) {
+					case 0:
+						streamer.enableStream("RGB+DOWN");
+						break;
+					case 1:
+						streamer.enableStream("DOWN+RGB");
+						break;
+					case 2:
+						streamer.enableStream("DEPTH+RGB");
+						break;
+					case 3:
+						streamer.enableStream("RGB"); 
+						break;
+					case 4:
+						streamer.enableStream("DOWN");
+
+					}
+					break;
+				}
+			}
+		});
+
+
 
 	}
 
@@ -329,10 +332,10 @@ public class StartUp  {
 	public static void main(String[] args)  {
 		System.setProperty("sun.java2d.opengl", "false");
 		System.setProperty("sun.java2d.xrender", "false");
-//		System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
-//		System.setProperty("org.bytedeco.javacpp.nopointergc", "true");
+		//		System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
+		//		System.setProperty("org.bytedeco.javacpp.nopointergc", "true");
 
-		
+
 		new StartUp(args);
 
 	}
@@ -369,6 +372,9 @@ public class StartUp  {
 			else if(depth!=null) 
 				depth.enableStream(true);
 		});
+		
+		streamer.enableStream("RGB+DOWN");
+		
 		try {
 			((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
 		} catch (Exception e1) {
@@ -393,9 +399,9 @@ public class StartUp  {
 
 		if(pose == null && control.isSimulation()) {
 			try {
-			pose = new MAVGazeboVisPositionEstimator(control);
-			pose.start();
-			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+				pose = new MAVGazeboVisPositionEstimator(control);
+				pose.start();
+				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
 			} catch(UnsatisfiedLinkError | Exception e ) {
 				System.out.println("Gazebo vision plugin could not be started");
 			}
@@ -405,7 +411,7 @@ public class StartUp  {
 		//*** OAK-D as depth
 		if(depth==null) {
 			try {
-	//			depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+				//			depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
 				depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer); 
 				depth.start();
 				depth.enableStream(true);
@@ -413,51 +419,51 @@ public class StartUp  {
 
 			} catch (Exception e) {
 				if(!control.isSimulation())
-				  e.printStackTrace();
+					e.printStackTrace();
 				depth=null;
 				System.out.println("No OAKD-Lite device found");
 			}
 
 		}
-		
-//		if(depth==null && control.isSimulation()) {
-//			try {
-//				depth = new MAVSimDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-//				depth.start();
-//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-//
-//			} catch (Exception e) {
-//				System.out.println("No depth simulation found");
-//			}
-//
-//		}
-		
-		
+
+		//		if(depth==null && control.isSimulation()) {
+		//			try {
+		//				depth = new MAVSimDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+		//				depth.start();
+		//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+		//
+		//			} catch (Exception e) {
+		//				System.out.println("No depth simulation found");
+		//			}
+		//
+		//		}
+
+
 		//*** OAK-D as simple Camera
-//		if(depth==null) {
-//			try {
-//				depth = new MAVOAKDCamEstimator(control,config, WIDTH,HEIGHT, streamer);
-//				depth.start();
-//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-//
-//			} catch (Exception e) {
-//				System.out.println("No OAKD-Lite device found");
-//			}
-//
-//		}
+		//		if(depth==null) {
+		//			try {
+		//				depth = new MAVOAKDCamEstimator(control,config, WIDTH,HEIGHT, streamer);
+		//				depth.start();
+		//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+		//
+		//			} catch (Exception e) {
+		//				System.out.println("No OAKD-Lite device found");
+		//			}
+		//
+		//		}
 
 		//*** D4xx as depth
 
-//		if(depth==null) {
-//			try {
-//				depth = new MAVD4xxDepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
-//				depth.start();
-//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-//
-//			} catch(UnsatisfiedLinkError | Exception e ) {
-//				System.out.println("No D455 device found");
-//			}
-//		}
+		//		if(depth==null) {
+		//			try {
+		//				depth = new MAVD4xxDepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
+		//				depth.start();
+		//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+		//
+		//			} catch(UnsatisfiedLinkError | Exception e ) {
+		//				System.out.println("No D455 device found");
+		//			}
+		//		}
 
 
 		//*** WebCam as depth
@@ -482,19 +488,19 @@ public class StartUp  {
 		//			}
 		//		}
 
-//		if(depth!=null && pose!=null) {
-//			streamer.enableStream("RGB+DOWN");
-//		} else
-//
-//		if(pose!=null && depth == null) {
-//			streamer.enableStream("DOWN");
-//		} else
-//
-//		if(depth!=null && pose == null) {
-//			streamer.enableStream("RGB+DEPTH");
-//		}
-		
-		
+		//		if(depth!=null && pose!=null) {
+		//			streamer.enableStream("RGB+DOWN");
+		//		} else
+		//
+		//		if(pose!=null && depth == null) {
+		//			streamer.enableStream("DOWN");
+		//		} else
+		//
+		//		if(depth!=null && pose == null) {
+		//			streamer.enableStream("RGB+DEPTH");
+		//		}
+
+
 	}
 
 	private class initPX4 implements Runnable {
