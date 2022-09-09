@@ -100,7 +100,7 @@ public class MSPPreflightCheck {
 
         // Is LPOS available
         if(!model.sys.isStatus(Status.MSP_LPOS_VALID))
-     		checkFailed("[msp] LPOS not available", FAILED);
+     		checkFailed("[msp] Local position not available", FAILED);
         
 //        if(Math.abs(model.state.l_z) > 0.3)
 //        	checkFailed("[msp] Local position not on ground", WARN);

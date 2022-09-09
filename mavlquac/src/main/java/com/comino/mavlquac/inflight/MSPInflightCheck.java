@@ -112,11 +112,16 @@ public class MSPInflightCheck implements Runnable {
 			return OK;
 		}
 
-		if(!model.est.isFlagSet(ESTIMATOR_STATUS_FLAGS.ESTIMATOR_PRED_POS_HORIZ_REL)) 
-			notifyCheck("[msp] EKF2 Position estimation failure.", MAV_SEVERITY.MAV_SEVERITY_ERROR);
+//		if(model.est.isFlagSet(ESTIMATOR_STATUS_FLAGS.ESTIMATOR_ACCEL_ERROR)) 
+//			notifyCheck("[msp] EKF2 estimation failure.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
+		
+		if(model.est.horizRatio > 1.0) 
+			notifyCheck("[msp] EKF2 pos ratio failure.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
 
 		if(model.sys.bat_state > 1)
 			notifyCheck(" [msp] PX4 battery warning.", MAV_SEVERITY.MAV_SEVERITY_WARNING);
+		
+		// TODO: Power supply checks  (Current > 35Amps)
 
 		if(hw.getBatteryTemperature() > 45.0f )
 			notifyCheck("[msp] battery warning: Temperature too high.", MAV_SEVERITY.MAV_SEVERITY_CRITICAL);
@@ -147,7 +152,6 @@ public class MSPInflightCheck implements Runnable {
 			control.writeLogMessage(new LogMessage(message,level));	
 		}
 		if(warnLevel > WARN) {
-			System.out.println("Inflight check: Not ready for flight");
 			model.sys.setStatus(Status.MSP_READY_FOR_FLIGHT, false);
 		}
 	}

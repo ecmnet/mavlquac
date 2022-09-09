@@ -387,7 +387,7 @@ public class StartUp  {
 
 		try {
 
-			pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
+			pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION_BODY, streamer);
 			pose.start();
 			pose.enableStream(true);
 			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
