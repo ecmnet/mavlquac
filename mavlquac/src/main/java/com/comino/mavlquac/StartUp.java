@@ -65,7 +65,6 @@ import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
-import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthSegmentEstimator;
@@ -229,18 +228,6 @@ public class StartUp  {
 			}
 
 		});
-
-
-		// Preflight checks when arming
-		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS,
-				Status.MSP_ARMED, StatusManager.EDGE_RISING, (n) -> {
-
-					if(MSPPreflightCheck.getInstance(control).performArmCheck(params)==MSPPreflightCheck.FAILED) {
-						control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_COMPONENT_ARM_DISARM,0 );
-						logger.writeLocalMsg("[msp] Disarmed. PreFlight health check failed",
-								MAV_SEVERITY.MAV_SEVERITY_EMERGENCY);
-					} 
-				});
 
 
 		// ?????
