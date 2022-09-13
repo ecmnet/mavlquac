@@ -65,7 +65,6 @@ import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
-import com.comino.mavlquac.inflight.MSPInflightCheck;
 import com.comino.mavlquac.preflight.MSPPreflightCheck;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
@@ -119,7 +118,6 @@ public class StartUp  {
 
 
 	private final HardwareAbstraction hw;
-	private final MSPInflightCheck inflightCheck;
 
 
 	public StartUp(String[] args) {
@@ -195,7 +193,6 @@ public class StartUp  {
 		} catch (InterruptedException e) {}
 
 
-		inflightCheck = new MSPInflightCheck(control, hw);
 		dispatcher = new MAVLinkDispatcher(control, config, hw);
 
 		control.start();
@@ -281,7 +278,6 @@ public class StartUp  {
 
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
-		wq.addCyclicTask("LP", 500,  inflightCheck);
 		wq.addSingleTask("LP", 100,  new initPX4());
 
 		wq.start();
