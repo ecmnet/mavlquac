@@ -35,7 +35,10 @@ package com.comino.mavlquac.dispatcher;
 
 import java.time.Instant;
 
+import org.mavlink.messages.LANDING_TARGET_TYPE;
+import org.mavlink.messages.MAV_FRAME;
 import org.mavlink.messages.lquac.msg_debug_vect;
+import org.mavlink.messages.lquac.msg_landing_target;
 import org.mavlink.messages.lquac.msg_msp_local_position_corrected;
 import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_micro_slam;
@@ -51,8 +54,13 @@ import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Slam;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.model.segment.Vision;
+import com.comino.mavcontrol.autopilot.actions.StandardActionFactory;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.workqueue.WorkQueue;
+
+import georegression.geometry.ConvertRotation3D_F32;
+import georegression.struct.EulerType;
+import georegression.struct.so.Quaternion_F32;
 
 public class MAVLinkDispatcher  {
 
@@ -67,6 +75,8 @@ public class MAVLinkDispatcher  {
 	private final msg_msp_micro_slam  				slam     = new msg_msp_micro_slam(2,1);
 	private final msg_msp_trajectory                traj 	 = new msg_msp_trajectory(2,1);
 	private final msg_msp_local_position_corrected  lposc 	 = new msg_msp_local_position_corrected(2,1);
+
+	private final msg_landing_target                landing  = new msg_landing_target(1,1);
 
 	private boolean publish_microslam;
 	private boolean publish_debug;
@@ -100,8 +110,6 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
 
-
-
 		}
 	}
 
@@ -131,14 +139,39 @@ public class MAVLinkDispatcher  {
 				lposc.tms     = DataModel.getSynchronizedPX4Time_us();
 				control.sendMAVLinkMessage(lposc);
 			}
-
 		}
 	}
 
 
 	private class Dispatch_100ms implements Runnable {
+		
 		@Override
 		public void run() {
+
+			if(control.isSimulation()) 
+				StandardActionFactory.simulateFiducial(control, 2.0f);
+
+			if( model.vision.isStatus(Vision.FIDUCIAL_ENABLED) && model.vision.isStatus(Vision.FIDUCIAL_LOCKED)) {
+
+				landing.x = model.vision.px;
+				landing.y = model.vision.py;
+
+				landing.z = 0;
+				
+				// Yaw not supported in PX4
+				
+				// Only simulation
+				if(control.isSimulation()) 
+				  landing.position_valid = 1;
+
+
+				landing.type      = LANDING_TARGET_TYPE.LANDING_TARGET_TYPE_VISION_FIDUCIAL;
+				landing.frame     = MAV_FRAME.MAV_FRAME_LOCAL_NED;
+				landing.time_usec = DataModel.getSynchronizedPX4Time_us();
+
+				control.sendMAVLinkMessage(landing);
+
+			}
 
 			// Publish SLAM data
 			if(publish_microslam && ( model.slam.fps > 0 || control.isSimulation())) {
