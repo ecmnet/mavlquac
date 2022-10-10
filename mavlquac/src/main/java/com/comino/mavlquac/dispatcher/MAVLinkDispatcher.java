@@ -148,17 +148,17 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
 
-			if(control.isSimulation()) 
+			if(control.isSimulation() && !model.vision.isStatus(Vision.AVAILABLE)) 
 				StandardActionFactory.simulateFiducial(control, 2.0f);
 
 			if( model.vision.isStatus(Vision.FIDUCIAL_ENABLED) && model.vision.isStatus(Vision.FIDUCIAL_LOCKED)) {
 
+				// Note: Yaw not supported in PX4
+				
 				landing.x = model.vision.px;
 				landing.y = model.vision.py;
 
 				landing.z = 0;
-				
-				// Yaw not supported in PX4
 				
 				// Only simulation
 				if(control.isSimulation()) 
@@ -227,7 +227,6 @@ public class MAVLinkDispatcher  {
 				control.sendMAVLinkMessage(traj);
 
 			}
-
 		}
 	}
 
