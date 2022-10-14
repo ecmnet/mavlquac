@@ -229,7 +229,7 @@ public class MAVLinkDispatcher  {
 			status.wifi_quality = hw.getWifiQuality();
 			status.threads = Thread.activeCount();
 			status.cpu_temp = (byte)hw.getCPUTemperature();
-			status.bat_temp = (byte)hw.getBatteryTemperature();
+			status.bat_type = (byte)model.sys.bat_type;
 			status.com_error = control.getErrorCount();
 			status.takeoff_ms = model.sys.t_takeoff_ms;
 			status.autopilot_mode =control.getCurrentModel().sys.autopilot;

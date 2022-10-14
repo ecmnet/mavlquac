@@ -207,8 +207,7 @@ public class StartUp  {
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);			
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,50000);
 				params.requestRefresh(true);
-				
-				
+					
 			}
 		});
 
@@ -226,6 +225,13 @@ public class StartUp  {
 					params.sendParameter("COM_RCL_EXCEPT", 7);
 					params.sendParameter("MPC_XY_VEL_P_ACC", 4.5f);
 					params.sendParameter("MIS_TAKEOFF_ALT", 1.5f);
+				}
+				
+				// Simple check for tethered mode; needs to be better
+				if(model.battery.b0 > 14.1 && model.battery.b0  < 14.4) {
+					model.sys.bat_type = Status.MSP_BAT_TYPE_TETHERED;
+				} else {
+					model.sys.bat_type = Status.MSP_BAT_TYPE_BAT;
 				}
 			}
 
