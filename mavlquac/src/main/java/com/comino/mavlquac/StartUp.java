@@ -207,6 +207,8 @@ public class StartUp  {
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);			
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,50000);
 				params.requestRefresh(true);
+				
+				
 			}
 		});
 
@@ -306,9 +308,6 @@ public class StartUp  {
 				}
 			}
 		});
-
-
-
 	}
 
 
@@ -346,6 +345,10 @@ public class StartUp  {
 	}
 
 	private void startOdometry() {
+		
+		model.vision.clear();
+		
+		System.out.println("Start odometry");
 
 		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
 		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
@@ -356,7 +359,12 @@ public class StartUp  {
 				depth.enableStream(true);
 		});
 		
-		streamer.enableStream("RGB+DOWN");
+//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
+//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
+//				streamer.stop();
+//			}
+//		});
+	
 		
 		try {
 			((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
@@ -471,17 +479,21 @@ public class StartUp  {
 		//			}
 		//		}
 
-		//		if(depth!=null && pose!=null) {
-		//			streamer.enableStream("RGB+DOWN");
-		//		} else
-		//
-		//		if(pose!=null && depth == null) {
-		//			streamer.enableStream("DOWN");
-		//		} else
-		//
-		//		if(depth!=null && pose == null) {
-		//			streamer.enableStream("RGB+DEPTH");
-		//		}
+		streamer.enableStream("RGB+DOWN");
+		
+//				if(depth!=null && pose!=null) {
+//					streamer.enableStream("RGB+DOWN");
+//				} else
+//		
+//				if(pose!=null && depth == null) {
+//					streamer.enableStream("DOWN");
+//				} 
+//				if(depth!=null && pose == null) {
+//					streamer.enableStream("RGB+DEPTH");
+//				}
+		
+		
+		
 
 
 	}

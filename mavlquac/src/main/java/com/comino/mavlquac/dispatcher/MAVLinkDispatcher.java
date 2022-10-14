@@ -33,19 +33,14 @@
 
 package com.comino.mavlquac.dispatcher;
 
-import java.time.Instant;
-
 import org.mavlink.messages.LANDING_TARGET_TYPE;
 import org.mavlink.messages.MAV_FRAME;
 import org.mavlink.messages.lquac.msg_debug_vect;
 import org.mavlink.messages.lquac.msg_landing_target;
 import org.mavlink.messages.lquac.msg_msp_local_position_corrected;
-import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_micro_slam;
 import org.mavlink.messages.lquac.msg_msp_status;
 import org.mavlink.messages.lquac.msg_msp_trajectory;
-import org.mavlink.messages.lquac.msg_system_time;
-import org.mavlink.messages.lquac.msg_timesync;
 
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
@@ -57,10 +52,6 @@ import com.comino.mavcom.model.segment.Vision;
 import com.comino.mavcontrol.autopilot.actions.StandardActionFactory;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.workqueue.WorkQueue;
-
-import georegression.geometry.ConvertRotation3D_F32;
-import georegression.struct.EulerType;
-import georegression.struct.so.Quaternion_F32;
 
 public class MAVLinkDispatcher  {
 
@@ -149,7 +140,7 @@ public class MAVLinkDispatcher  {
 		public void run() {
 
 			if(control.isSimulation() && !model.vision.isStatus(Vision.AVAILABLE)) 
-				StandardActionFactory.simulateFiducial(control, 2.0f);
+				StandardActionFactory.simulateFiducial(control, 3.0f);
 
 			if( model.vision.isStatus(Vision.FIDUCIAL_ENABLED) && model.vision.isStatus(Vision.FIDUCIAL_LOCKED)) {
 
@@ -157,17 +148,13 @@ public class MAVLinkDispatcher  {
 				
 				landing.x = model.vision.px;
 				landing.y = model.vision.py;
-
-				landing.z = 0;
-				
-				// Only simulation
-				if(control.isSimulation()) 
-				  landing.position_valid = 1;
-
+				landing.z = model.vision.pz;
+				landing.position_valid = 1;
 
 				landing.type      = LANDING_TARGET_TYPE.LANDING_TARGET_TYPE_VISION_FIDUCIAL;
 				landing.frame     = MAV_FRAME.MAV_FRAME_LOCAL_NED;
-				landing.time_usec = DataModel.getSynchronizedPX4Time_us();
+				// Note: PX4Synched time does not work here!!
+				landing.time_usec = model.vision.tms;
 
 				control.sendMAVLinkMessage(landing);
 
@@ -246,10 +233,11 @@ public class MAVLinkDispatcher  {
 			status.com_error = control.getErrorCount();
 			status.takeoff_ms = model.sys.t_takeoff_ms;
 			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
-			if(model.sys.t_boot_ms > 0)
-				status.uptime_ms = model.sys.t_boot_ms;
-			else
-				status.uptime_ms = System.currentTimeMillis() - init_tms;
+//			if(model.sys.t_boot_ms > 0)
+//				status.uptime_ms = model.sys.t_boot_ms;
+//			else
+//				status.uptime_ms = System.currentTimeMillis() - init_tms;
+			status.uptime_ms = DataModel.getBootTime();
 			status.status = control.getCurrentModel().sys.getStatus();
 			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
 			status.setArch(hw.getArchName());
