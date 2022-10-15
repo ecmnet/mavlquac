@@ -102,6 +102,12 @@ public class Console implements Runnable {
 			return;
 		}
 
+		// Sensors and services
+		if(s.contains("se")) {
+			System.out.println(control.getCurrentModel().sys.getSensorString());
+			return;
+		}
+
 		// Status
 		if(s.contains("nav")) {
 			System.out.println(control.getCurrentModel().sys.getModeString());

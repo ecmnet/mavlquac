@@ -111,6 +111,7 @@ public class StartUp  {
 
 
 	private int mode;
+	private boolean stream_auto_switched = false;
 
 	private MSPLogger logger;
 	private PX4Parameters params;
@@ -199,7 +200,7 @@ public class StartUp  {
 
 		registerActions();
 		registerCommands();
-		
+
 		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
 
 		// Start services if required
@@ -270,9 +271,9 @@ public class StartUp  {
 		});
 
 	}
-	
+
 	private void registerCommands() {
-		
+
 		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
 			@Override
 			public void received(Object o) {
@@ -305,19 +306,19 @@ public class StartUp  {
 				}
 			}
 		});
-		
+
 	}
-	
+
 	private void registerActions() {
-		
-		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_CONNECTED, StatusManager.EDGE_RISING, (a) -> {
+
+		control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS, Status.MSP_CONNECTED, StatusManager.EDGE_RISING, (a) -> {
 			if(!model.sys.isStatus(Status.MSP_ARMED)) {
 				System.out.println("Setting up MAVLINK streams...");
 				// Note: Interval is in us
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);			
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,50000);
 				params.requestRefresh(true);
-					
+
 			}
 		});
 
@@ -336,7 +337,7 @@ public class StartUp  {
 					params.sendParameter("MPC_XY_VEL_P_ACC", 4.5f);
 					params.sendParameter("MIS_TAKEOFF_ALT", 1.5f);
 				}
-				
+
 				// Simple check for tethered mode; needs to be better
 				if(model.battery.b0 > 14.1 && model.battery.b0  < 14.4) {
 					model.sys.bat_type = Status.MSP_BAT_TYPE_TETHERED;
@@ -353,19 +354,28 @@ public class StartUp  {
 				Status.MSP_SLAM_AVAILABILITY, StatusManager.EDGE_FALLING, (n) -> {
 					logger.writeLocalMsg("[msp] SLAM disabled", MAV_SEVERITY.MAV_SEVERITY_INFO);
 				});
-		
+
 		// Switch to down view when precision landing
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_NAVSTATE, Status.NAVIGATION_STATE_AUTO_PRECLAND, (n) -> {
 			if(n.isNavState(Status.NAVIGATION_STATE_AUTO_PRECLAND)) 
-				streamer.enableStream("DOWN+RGB");				
+				streamer.enableStream("DOWN+RGB");	
+			stream_auto_switched = true;
 		});
-		
+
+		// Switch to FPV stream after landing
+		control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS,Status.MSP_ARMED, StatusManager.EDGE_FALLING, (n) -> {
+			if(stream_auto_switched) {
+				stream_auto_switched = false;
+				streamer.enableStream("RGB+DOWN");	
+			}
+		});
+
 	}
 
 	private void startOdometry() {
-		
+
 		model.vision.clear();
-		
+
 		System.out.println("Start odometry");
 
 		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
@@ -376,14 +386,14 @@ public class StartUp  {
 			else if(depth!=null) 
 				depth.enableStream(true);
 		});
-		
-//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
-//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
-//				streamer.stop();
-//			}
-//		});
-	
-		
+
+		//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
+		//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
+		//				streamer.stop();
+		//			}
+		//		});
+
+
 		try {
 			((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
 		} catch (Exception e1) {
@@ -498,20 +508,20 @@ public class StartUp  {
 		//		}
 
 		streamer.enableStream("RGB+DOWN");
-		
-//				if(depth!=null && pose!=null) {
-//					streamer.enableStream("RGB+DOWN");
-//				} else
-//		
-//				if(pose!=null && depth == null) {
-//					streamer.enableStream("DOWN");
-//				} 
-//				if(depth!=null && pose == null) {
-//					streamer.enableStream("RGB+DEPTH");
-//				}
-		
-		
-		
+
+		//				if(depth!=null && pose!=null) {
+		//					streamer.enableStream("RGB+DOWN");
+		//				} else
+		//		
+		//				if(pose!=null && depth == null) {
+		//					streamer.enableStream("DOWN");
+		//				} 
+		//				if(depth!=null && pose == null) {
+		//					streamer.enableStream("RGB+DEPTH");
+		//				}
+
+
+
 
 
 	}
