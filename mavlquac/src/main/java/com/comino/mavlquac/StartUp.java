@@ -191,15 +191,125 @@ public class StartUp  {
 			Thread.sleep(1000);
 		} catch (InterruptedException e) {}
 
-
-		dispatcher = new MAVLinkDispatcher(control, config, hw);
-
 		control.start();
 		model = control.getCurrentModel();
 
+		commander  = new MSPCommander(control,config);
+		dispatcher = new MAVLinkDispatcher(control, config, hw);
 
-		commander = new MSPCommander(control,config);
+		registerActions();
+		registerCommands();
+		
+		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
 
+		// Start services if required
+
+		//		flow = new MAVFlowPositionEstimator(control);
+		//		try {
+		//			flow.start();
+		//		} catch (Exception e) {
+		//		}
+
+
+		System.out.println(control.getStatusManager().getSize()+" status events registered");
+
+		// Send system time
+
+		//		Instant ins = Instant.now();
+		//		long now_ns = ins.getEpochSecond() * 1000000000L + ins.getNano();
+		//		msg_system_time time     = new msg_system_time(1, 1);
+		//		time.time_unix_usec = now_ns /1000L;
+		//		control.sendMAVLinkMessage(time);
+
+		// Setup WorkQueues and start them
+
+		Console console = new Console(control);
+		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
+
+		wq.addCyclicTask("LP", 200,  console);
+		wq.addCyclicTask("LP", 500,  hw);
+		wq.addSingleTask("LP", 100,  new initPX4());
+
+		wq.start();
+
+		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
+			startOdometry();
+		}
+
+	}
+
+	public static void main(String[] args)  {
+		System.setProperty("sun.java2d.opengl", "false");
+		System.setProperty("sun.java2d.xrender", "false");
+		//		System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
+		//		System.setProperty("org.bytedeco.javacpp.nopointergc", "true");
+
+
+		new StartUp(args);
+
+	}
+
+	private void addShutdownHook() {
+
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+
+				control.shutdown();
+				wq.printStatus();
+				wq.stop();
+
+				if(pose!=null)
+					pose.stop();
+				if(depth!=null)
+					depth.stop();
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {}
+			}
+
+		});
+
+	}
+	
+	private void registerCommands() {
+		
+		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
+			@Override
+			public void received(Object o) {
+
+
+				msg_msp_command cmd = (msg_msp_command)o;
+				switch(cmd.command) {
+				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
+					commander.getAutopilot().invalidate_map_transfer();
+					break;
+				case MSP_CMD.SELECT_VIDEO_STREAM:
+					switch((int)cmd.param1) {
+					case 0:
+						streamer.enableStream("RGB+DOWN");
+						break;
+					case 1:
+						streamer.enableStream("DOWN+RGB");
+						break;
+					case 2:
+						streamer.enableStream("DEPTH+RGB");
+						break;
+					case 3:
+						streamer.enableStream("RGB"); 
+						break;
+					case 4:
+						streamer.enableStream("DOWN");
+
+					}
+					break;
+				}
+			}
+		});
+		
+	}
+	
+	private void registerActions() {
+		
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_STATUS, Status.MSP_CONNECTED, StatusManager.EDGE_RISING, (a) -> {
 			if(!model.sys.isStatus(Status.MSP_ARMED)) {
 				System.out.println("Setting up MAVLINK streams...");
@@ -243,111 +353,13 @@ public class StartUp  {
 				Status.MSP_SLAM_AVAILABILITY, StatusManager.EDGE_FALLING, (n) -> {
 					logger.writeLocalMsg("[msp] SLAM disabled", MAV_SEVERITY.MAV_SEVERITY_INFO);
 				});
-
-
-		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
-
-		// Start services if required
-
-		//		flow = new MAVFlowPositionEstimator(control);
-		//		try {
-		//			flow.start();
-		//		} catch (Exception e) {
-		//		}
-
-
-		System.out.println(control.getStatusManager().getSize()+" status events registered");
-
-		// Send system time
-
-		//		Instant ins = Instant.now();
-		//		long now_ns = ins.getEpochSecond() * 1000000000L + ins.getNano();
-		//		msg_system_time time     = new msg_system_time(1, 1);
-		//		time.time_unix_usec = now_ns /1000L;
-		//		control.sendMAVLinkMessage(time);
-
-		// Setup WorkQueues and start them
-
-		Console console = new Console(control);
-		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
-
-		wq.addCyclicTask("LP", 200,  console);
-		wq.addCyclicTask("LP", 500,  hw);
-		wq.addSingleTask("LP", 100,  new initPX4());
-
-		wq.start();
-
-		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
-			startOdometry();
-		}
-
-		// Dispatch commands
-		control.registerListener(msg_msp_command.class, new IMAVLinkListener() {
-			@Override
-			public void received(Object o) {
-
-
-				msg_msp_command cmd = (msg_msp_command)o;
-				switch(cmd.command) {
-				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
-					commander.getAutopilot().invalidate_map_transfer();
-					break;
-				case MSP_CMD.SELECT_VIDEO_STREAM:
-					switch((int)cmd.param1) {
-					case 0:
-						streamer.enableStream("RGB+DOWN");
-						break;
-					case 1:
-						streamer.enableStream("DOWN+RGB");
-						break;
-					case 2:
-						streamer.enableStream("DEPTH+RGB");
-						break;
-					case 3:
-						streamer.enableStream("RGB"); 
-						break;
-					case 4:
-						streamer.enableStream("DOWN");
-
-					}
-					break;
-				}
-			}
+		
+		// Switch to down view when precision landing
+		control.getStatusManager().addListener(StatusManager.TYPE_PX4_NAVSTATE, Status.NAVIGATION_STATE_AUTO_PRECLAND, (n) -> {
+			if(n.isNavState(Status.NAVIGATION_STATE_AUTO_PRECLAND)) 
+				streamer.enableStream("DOWN+RGB");				
 		});
-	}
-
-
-	public static void main(String[] args)  {
-		System.setProperty("sun.java2d.opengl", "false");
-		System.setProperty("sun.java2d.xrender", "false");
-		//		System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
-		//		System.setProperty("org.bytedeco.javacpp.nopointergc", "true");
-
-
-		new StartUp(args);
-
-	}
-
-	private void addShutdownHook() {
-
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-
-				control.shutdown();
-				wq.printStatus();
-				wq.stop();
-
-				if(pose!=null)
-					pose.stop();
-				if(depth!=null)
-					depth.stop();
-				try {
-					Thread.sleep(200);
-				} catch (InterruptedException e) {}
-			}
-
-		});
-
+		
 	}
 
 	private void startOdometry() {
