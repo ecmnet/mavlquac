@@ -67,14 +67,9 @@ import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
-import com.comino.mavodometry.estimators.depth.MAVOAKDDepthSegmentEstimator;
-import com.comino.mavodometry.estimators.depth.MAVSimDepthSegmentEstimator;
 import com.comino.mavodometry.estimators.position.MAVGazeboVisPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
-import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
-import com.comino.mavodometry.video.impl.mjpeg.RTSPMjpegHandler;
-
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamMjpegHandler;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
@@ -83,7 +78,6 @@ import com.comino.mavutils.workqueue.WorkQueue;
 import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
 import boofcv.struct.image.Planar;
-import sample.SampleJpeg;
 
 public class StartUp  {
 
@@ -357,12 +351,12 @@ public class StartUp  {
 
 		// Switch to down view when precision landing
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_NAVSTATE, Status.NAVIGATION_STATE_AUTO_PRECLAND, (n) -> {
-			if(n.isNavState(Status.NAVIGATION_STATE_AUTO_PRECLAND)) 
+			if(n.isNavState(Status.NAVIGATION_STATE_AUTO_PRECLAND) && pose !=null) 
 				streamer.enableStream("DOWN+RGB");	
 			stream_auto_switched = true;
 		});
-
-		// Switch to FPV stream after landing
+		
+		// switch back to FPV is previsously switched to down view
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS,Status.MSP_ARMED, StatusManager.EDGE_FALLING, (n) -> {
 			if(stream_auto_switched) {
 				stream_auto_switched = false;
@@ -380,6 +374,7 @@ public class StartUp  {
 
 		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
 		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+		
 		streamer.registerNoVideoListener(() -> {
 			if(pose!=null)  
 				pose.enableStream(true);  
@@ -410,21 +405,24 @@ public class StartUp  {
 			pose.start();
 			pose.enableStream(true);
 			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+			
+			
 
 		} catch(UnsatisfiedLinkError | Exception e ) {
+			pose = null;
 			System.out.println("No T265 device found");
 		}
 
 
-		if(pose == null && control.isSimulation()) {
-			try {
-				pose = new MAVGazeboVisPositionEstimator(control);
-				pose.start();
-				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-			} catch(UnsatisfiedLinkError | Exception e ) {
-				System.out.println("Gazebo vision plugin could not be started");
-			}
-		}
+//		if(pose == null && control.isSimulation()) {
+//			try {
+//				pose = new MAVGazeboVisPositionEstimator(control);
+//				pose.start();
+//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+//			} catch(UnsatisfiedLinkError | Exception e ) {
+//				System.out.println("Gazebo vision plugin could not be started");
+//			}
+//		}
 
 
 		//*** OAK-D as depth
