@@ -49,7 +49,7 @@ import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.model.segment.Slam;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.model.segment.Vision;
-import com.comino.mavcontrol.autopilot.actions.StandardActionFactory;
+import com.comino.mavcontrol.autopilot.actions.SequencerActionFactory;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.workqueue.WorkQueue;
 
@@ -140,7 +140,7 @@ public class MAVLinkDispatcher  {
 		public void run() {
 
 			if(control.isSimulation() && !model.vision.isStatus(Vision.AVAILABLE)) 
-				StandardActionFactory.simulateFiducial(control, 3.0f);
+				SequencerActionFactory.simulateFiducial(control, 3.0f);
 
 			if( model.vision.isStatus(Vision.FIDUCIAL_ENABLED) && model.vision.isStatus(Vision.FIDUCIAL_LOCKED)) {
 
@@ -188,7 +188,7 @@ public class MAVLinkDispatcher  {
 
 			// Trajectory publishing	
 
-			if(model.slam.flags == Slam.OFFBOARD_FLAG_MOVE) {
+			if(model.slam.isFlag(Slam.OFFBOARD_FLAG_XYZ_PLANNER)) {
 
 				traj.ls = model.traj.ls;
 				traj.fs = model.traj.fs;
