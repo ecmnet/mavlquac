@@ -71,6 +71,7 @@ import com.comino.mavodometry.estimators.position.MAVGazeboVisPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamMjpegHandler;
+import com.comino.mavutils.file.MSPFileUtils;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
@@ -120,6 +121,8 @@ public class StartUp  {
 
 		// NVJPEG CUDA TEST
 		//SampleJpeg.test();
+		
+		try { Thread.sleep(1000); } catch(Exception e) { }
 
 
 		addShutdownHook();
@@ -151,7 +154,7 @@ public class StartUp  {
 
 		case  MAVController.MODE_NORMAL:
 
-			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass()),"msp.properties");
+			config  = MSPConfig.getInstance(MSPFileUtils.getJarContainingFolder(this.getClass()),"msp.properties");
 			control = new MAVProxyController(MAVController.MODE_NORMAL,config);
 			System.out.println("MSPControlService (LQUAC build) version "+config.getVersion());
 
@@ -167,26 +170,18 @@ public class StartUp  {
 
 		default:
 
-			config  = MSPConfig.getInstance(getJarContainingFolder(this.getClass())+"/../properties/","msp.properties");
+			config  = MSPConfig.getInstance(MSPFileUtils.getJarContainingFolder(this.getClass())+"/../properties/","msp.properties");
 			control = new MAVProxyController(mode, config);
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
-
-		params = PX4Parameters.getInstance(control);
-
-
+		
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
 
+		params = PX4Parameters.getInstance(control);
+
 		try { Thread.sleep(300); } catch(Exception e) { }
 
-		control.connect();
-
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {}
-
-		control.start();
 		model = control.getCurrentModel();
 
 		commander  = new MSPCommander(control,config);
@@ -194,6 +189,13 @@ public class StartUp  {
 
 		registerActions();
 		registerCommands();
+		
+		Console console = new Console(control);
+		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
+		
+		
+		control.connect();
+        control.start();
 
 		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
 
@@ -218,18 +220,17 @@ public class StartUp  {
 
 		// Setup WorkQueues and start them
 
-		Console console = new Console(control);
-		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
-
+		
+		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
+			startOdometry();
+		}
+		
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
 		wq.addSingleTask("LP", 100,  new initPX4());
 
 		wq.start();
 
-		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
-			startOdometry();
-		}
 
 	}
 
@@ -548,7 +549,7 @@ public class StartUp  {
 	private void redirectConsole()  {
 
 		try {
-			File file = new File(getJarContainingFolder(this.getClass())+"/msp.log");
+			File file = new File(MSPFileUtils.getJarContainingFolder(this.getClass())+"/msp.log");
 
 			if(file.exists())
 				file.delete();
@@ -563,32 +564,6 @@ public class StartUp  {
 			e.printStackTrace();
 		}
 
-	}
-
-	@SuppressWarnings("rawtypes")
-	public static String getJarContainingFolder(Class aclass)  {
-		CodeSource codeSource = aclass.getProtectionDomain().getCodeSource();
-
-		File jarFile;
-
-		try {
-
-			if (codeSource.getLocation() != null) {
-				jarFile = new File(codeSource.getLocation().toURI());
-			}
-			else {
-				String path = aclass.getResource(aclass.getSimpleName() + ".class").getPath();
-				String jarFilePath = path.substring(path.indexOf(":") + 1, path.indexOf("!"));
-				jarFilePath = URLDecoder.decode(jarFilePath, "UTF-8");
-				jarFile = new File(jarFilePath);
-			}
-			System.out.println("Properties searched in "+jarFile.getParentFile().getAbsolutePath());
-			return jarFile.getParentFile().getAbsolutePath();
-
-		} catch(Exception e) {
-			System.out.println("Properties not found: "+e.getMessage());
-			return null;
-		}
 	}
 
 }
