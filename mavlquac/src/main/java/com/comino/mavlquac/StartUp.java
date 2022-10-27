@@ -177,10 +177,8 @@ public class StartUp  {
 		
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
-
+		
 		params = PX4Parameters.getInstance(control);
-
-		try { Thread.sleep(300); } catch(Exception e) { }
 
 		model = control.getCurrentModel();
 
@@ -192,38 +190,20 @@ public class StartUp  {
 		
 		Console console = new Console(control);
 		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
+
+		System.out.println(control.getStatusManager().getSize()+" status events registered");
+
+		// Setup WorkQueues and start them
 		
+		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
+			startOdometry();
+		}
 		
 		control.connect();
         control.start();
 
 		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
 
-		// Start services if required
-
-		//		flow = new MAVFlowPositionEstimator(control);
-		//		try {
-		//			flow.start();
-		//		} catch (Exception e) {
-		//		}
-
-
-		System.out.println(control.getStatusManager().getSize()+" status events registered");
-
-		// Send system time
-
-		//		Instant ins = Instant.now();
-		//		long now_ns = ins.getEpochSecond() * 1000000000L + ins.getNano();
-		//		msg_system_time time     = new msg_system_time(1, 1);
-		//		time.time_unix_usec = now_ns /1000L;
-		//		control.sendMAVLinkMessage(time);
-
-		// Setup WorkQueues and start them
-
-		
-		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
-			startOdometry();
-		}
 		
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
@@ -308,12 +288,11 @@ public class StartUp  {
 
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS, Status.MSP_CONNECTED, StatusManager.EDGE_RISING, (a) -> {
 			if(!model.sys.isStatus(Status.MSP_ARMED)) {
+				params.requestRefresh(true);
 				System.out.println("Setting up MAVLINK streams...");
 				// Note: Interval is in us
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);			
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,50000);
-				params.requestRefresh(true);
-
 			}
 		});
 
