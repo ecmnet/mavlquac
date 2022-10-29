@@ -310,6 +310,10 @@ public class StartUp  {
 					params.sendParameter("COM_RCL_EXCEPT", 7);
 					params.sendParameter("MPC_XY_VEL_P_ACC", 4.5f);
 					params.sendParameter("MIS_TAKEOFF_ALT", 1.5f);
+					
+					params.sendParameter("MC_PITCHRATE_K", 1.9f);
+					params.sendParameter("MC_ROLLRATE_K", 1.9f);
+					params.sendParameter("MC_YAWRATE_K", 1.9f);
 				}
 
 				// Simple check for tethered mode; needs to be better
