@@ -231,7 +231,7 @@ public class StartUp  {
 			public void run() {
 
 				control.shutdown();
-				wq.printStatus();
+				//wq.printStatus();
 				wq.stop();
 
 				if(pose!=null)
