@@ -71,6 +71,7 @@ import com.comino.mavodometry.estimators.position.MAVGazeboVisPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamMjpegHandler;
+import com.comino.mavutils.MSPUtils;
 import com.comino.mavutils.file.MSPFileUtils;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
@@ -174,6 +175,8 @@ public class StartUp  {
 			control = new MAVProxyController(mode, config);
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
+		
+		MSPUtils.getInstance(control.isSimulation());
 		
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
