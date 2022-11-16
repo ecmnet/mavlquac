@@ -195,11 +195,13 @@ public class StartUp  {
 		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
 
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
-
+	
+        
 		// Setup WorkQueues and start them
 		
 		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
 			startOdometry();
+			try { Thread.sleep(1000); } catch(Exception e) { }
 		}
 		
 		control.connect();
@@ -413,15 +415,15 @@ public class StartUp  {
 		}
 
 
-//		if(pose == null && control.isSimulation()) {
-//			try {
-//				pose = new MAVGazeboVisPositionEstimator(control);
-//				pose.start();
-//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-//			} catch(UnsatisfiedLinkError | Exception e ) {
-//				System.out.println("Gazebo vision plugin could not be started");
-//			}
-//		}
+		if(pose == null && control.isSimulation()) {
+			try {
+				pose = new MAVGazeboVisPositionEstimator(control);
+				pose.start();
+				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+			} catch(UnsatisfiedLinkError | Exception e ) {
+				System.out.println("Gazebo vision plugin could not be started");
+			}
+		}
 
 
 		//*** OAK-D as depth
