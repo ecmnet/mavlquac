@@ -203,11 +203,7 @@ public class StartUp  {
 			startOdometry();
 			try { Thread.sleep(1000); } catch(Exception e) { }
 		}
-		
-		control.connect();
-        control.start();
-
-		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
+	
 
 		
 		wq.addCyclicTask("LP", 200,  console);
@@ -215,6 +211,11 @@ public class StartUp  {
 		wq.addSingleTask("LP", 100,  new initPX4());
 
 		wq.start();
+		
+		control.connect();
+        control.start();
+
+		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
 
 
 	}
