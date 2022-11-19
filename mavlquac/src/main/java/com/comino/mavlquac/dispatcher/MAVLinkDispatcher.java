@@ -208,6 +208,9 @@ public class MAVLinkDispatcher  {
 				traj.svx = model.traj.svx;
 				traj.svy = model.traj.svy;
 				traj.svz = model.traj.svz;
+				traj.sax = model.traj.sax;
+				traj.say = model.traj.say;
+				traj.saz = model.traj.saz;
 
 				traj.tms = model.traj.tms;
 

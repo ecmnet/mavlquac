@@ -71,7 +71,7 @@ import com.comino.mavodometry.estimators.position.MAVGazeboVisPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamMjpegHandler;
-import com.comino.mavutils.MSPUtils;
+import com.comino.mavutils.MSPStringUtils;
 import com.comino.mavutils.file.MSPFileUtils;
 import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
@@ -176,7 +176,7 @@ public class StartUp  {
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
 		
-		MSPUtils.getInstance(control.isSimulation());
+		MSPStringUtils.getInstance(control.isSimulation());
 		
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
@@ -195,16 +195,13 @@ public class StartUp  {
 		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
 
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
-	
-        
-		// Setup WorkQueues and start them
+
 		
 		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
 			startOdometry();
-			try { Thread.sleep(1000); } catch(Exception e) { }
 		}
-	
 
+		// Setup WorkQueues and start them
 		
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
@@ -212,7 +209,7 @@ public class StartUp  {
 
 		wq.start();
 		
-		control.connect();
+		//control.connect();
         control.start();
 
 		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
@@ -294,11 +291,13 @@ public class StartUp  {
 
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS, Status.MSP_CONNECTED, StatusManager.EDGE_RISING, (a) -> {
 			if(!model.sys.isStatus(Status.MSP_ARMED)) {
-				params.requestRefresh(true);
-				System.out.println("Setting up MAVLINK streams...");
+				System.out.println("Setting up MAVLINK streams and refresh parameters...");
 				// Note: Interval is in us
-				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);			
+				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);	
+				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_STATUS,-1);	
+				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_INFO,-1);	
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,50000);
+				params.requestRefresh(true);
 			}
 		});
 
