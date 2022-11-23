@@ -118,24 +118,12 @@ public class MAVLinkDispatcher  {
 				control.sendMAVLinkMessage(debug);
 			}
 
-			// Send Local position corrected message to GC
-			if(model.state.l_rx != 0 || model.state.l_ry != 0 || model.state.l_rz != 0) {
-				lposc.counter = model.est.reset_counter;
-				lposc.cx      = model.state.l_rx;
-				lposc.cy      = model.state.l_ry;
-				lposc.cz      = model.state.l_rz;
-				lposc.gx      = model.vision.gx;
-				lposc.gy      = model.vision.gy;
-				lposc.gz      = model.vision.gz;
-				lposc.tms     = DataModel.getSynchronizedPX4Time_us();
-				control.sendMAVLinkMessage(lposc);
-			}
 		}
 	}
 
 
 	private class Dispatch_100ms implements Runnable {
-		
+
 		@Override
 		public void run() {
 
@@ -145,7 +133,7 @@ public class MAVLinkDispatcher  {
 			if( model.vision.isStatus(Vision.FIDUCIAL_ENABLED) && model.vision.isStatus(Vision.FIDUCIAL_LOCKED)) {
 
 				// Note: Yaw not supported in PX4
-				
+
 				landing.x = model.vision.px;
 				landing.y = model.vision.py;
 				landing.z = model.vision.pz;
@@ -163,12 +151,10 @@ public class MAVLinkDispatcher  {
 			// Publish SLAM data
 			if(publish_microslam && ( model.slam.fps > 0 || control.isSimulation())) {
 
-				slam.pd = model.slam.pd;
-				slam.pp = model.slam.pp;
-				slam.pv = model.slam.pv;
-				slam.px = model.slam.px;
-				slam.py = model.slam.py;
-				slam.pz = model.slam.pz;
+
+				slam.ix = model.slam.ix;
+				slam.iy = model.slam.iy;
+				slam.iz = model.slam.iz;
 				slam.md = model.slam.di;
 				slam.mw = model.slam.dw;
 				slam.dm = model.slam.dm;
@@ -217,6 +203,19 @@ public class MAVLinkDispatcher  {
 				control.sendMAVLinkMessage(traj);
 
 			}
+
+			// Send Local position corrected message to GC
+			if(model.state.l_rx != 0 || model.state.l_ry != 0 || model.state.l_rz != 0) {
+				lposc.counter = model.est.reset_counter;
+				lposc.cx      = model.state.l_rx;
+				lposc.cy      = model.state.l_ry;
+				lposc.cz      = model.state.l_rz;
+				lposc.gx      = model.vision.gx;
+				lposc.gy      = model.vision.gy;
+				lposc.gz      = model.vision.gz;
+				lposc.tms     = DataModel.getSynchronizedPX4Time_us();
+				control.sendMAVLinkMessage(lposc);
+			}
 		}
 	}
 
@@ -236,10 +235,10 @@ public class MAVLinkDispatcher  {
 			status.com_error = control.getErrorCount();
 			status.takeoff_ms = model.sys.t_takeoff_ms;
 			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
-//			if(model.sys.t_boot_ms > 0)
-//				status.uptime_ms = model.sys.t_boot_ms;
-//			else
-//				status.uptime_ms = System.currentTimeMillis() - init_tms;
+			//			if(model.sys.t_boot_ms > 0)
+			//				status.uptime_ms = model.sys.t_boot_ms;
+			//			else
+			//				status.uptime_ms = System.currentTimeMillis() - init_tms;
 			status.uptime_ms = DataModel.getBootTime();
 			status.status = control.getCurrentModel().sys.getStatus();
 			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));

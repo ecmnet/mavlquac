@@ -203,11 +203,12 @@ public class StartUp  {
 
 		// Setup WorkQueues and start them
 		
+		wq.start();
+		
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
 		wq.addSingleTask("LP", 100,  new initPX4());
 
-		wq.start();
 		
 		//control.connect();
         control.start();
@@ -297,6 +298,7 @@ public class StartUp  {
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_STATUS,-1);	
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_INFO,-1);	
 				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,50000);
+		//		control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_SET_POSITION_TARGET_LOCAL_NED,20000);
 				params.requestRefresh(true);
 			}
 		});
