@@ -37,16 +37,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.net.URLDecoder;
-import java.security.CodeSource;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-import org.mavlink.messages.IMAVLinkMessageID;
-import org.mavlink.messages.MAV_CMD;
-import org.mavlink.messages.MAV_SEVERITY;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
 
@@ -67,7 +62,6 @@ import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
-import com.comino.mavodometry.estimators.position.MAVGazeboVisPositionEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamMjpegHandler;
@@ -117,8 +111,6 @@ public class StartUp  {
 
 
 	public StartUp(String[] args) {
-
-		//System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
 
 		// NVJPEG CUDA TEST
 		//SampleJpeg.test();
@@ -290,67 +282,6 @@ public class StartUp  {
 
 	private void registerActions() {
 
-		control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS, Status.MSP_CONNECTED, StatusManager.EDGE_RISING, (a) -> {
-			if(!model.sys.isStatus(Status.MSP_ARMED)) {
-				System.out.println("Setting up MAVLINK streams and refresh parameters...");
-				// Note: Interval is in us
-				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_UTM_GLOBAL_POSITION,-1);	
-				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_STATUS,-1);	
-				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESC_INFO,-1);	
-				control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_ESTIMATOR_STATUS,50000);
-		//		control.sendMAVLinkCmd(MAV_CMD.MAV_CMD_SET_MESSAGE_INTERVAL,IMAVLinkMessageID.MAVLINK_MSG_ID_SET_POSITION_TARGET_LOCAL_NED,20000);
-				params.requestRefresh(true);
-			}
-		});
-
-
-		// Set initial PX4 Parameters
-		control.getStatusManager().addListener(Status.MSP_PARAMS_LOADED, (n) -> {
-			if(n.isStatus(Status.MSP_PARAMS_LOADED) && !model.sys.isStatus(Status.MSP_ARMED)) {
-
-				params.sendParameter("RTL_DESCEND_ALT", 1.0f);
-				params.sendParameter("RTL_RETURN_ALT", 1.0f);
-				params.sendParameter("NAV_MC_ALT_RAD", 0.05f);
-
-				if(control.isSimulation()) {
-					params.sendParameter("COM_RC_OVERRIDE", 0);
-					params.sendParameter("COM_RCL_EXCEPT", 7);
-					params.sendParameter("MPC_XY_VEL_P_ACC", 4.5f);
-					params.sendParameter("MIS_TAKEOFF_ALT", 1.5f);
-					
-					// Autotune params
-					params.sendParameter("MC_ROLL_P", 5.92f);
-					params.sendParameter("MC_ROLLRATE_P", 0.170f);
-					params.sendParameter("MC_ROLLRATE_I", 0.217f);
-					params.sendParameter("MC_ROLLRATE_D", 0.0036f);
-					
-					params.sendParameter("MC_PITCH_P", 5.72f);
-					params.sendParameter("MC_PITCHRATE_P", 0.162f);
-					params.sendParameter("MC_PITCHRATE_I", 0.228f);
-					params.sendParameter("MC_PITCHRATE_D", 0.0037f);
-					
-					params.sendParameter("MC_YAW_P", 5.0f);
-					params.sendParameter("MC_YAWRATE_P", 0.17f);
-					params.sendParameter("MC_YAWRATE_I", 0.17f);
-			
-				}
-
-				// Simple check for tethered mode; needs to be better
-				if(model.battery.b0 > 14.1 && model.battery.b0  < 14.4) {
-					model.sys.bat_type = Status.MSP_BAT_TYPE_TETHERED;
-				} else {
-					model.sys.bat_type = Status.MSP_BAT_TYPE_BAT;
-				}
-			}
-
-		});
-
-
-		// ?????
-		control.getStatusManager().addListener(StatusManager.TYPE_MSP_SERVICES,
-				Status.MSP_SLAM_AVAILABILITY, StatusManager.EDGE_FALLING, (n) -> {
-					logger.writeLocalMsg("[msp] SLAM disabled", MAV_SEVERITY.MAV_SEVERITY_INFO);
-				});
 
 		// Switch to down view when precision landing
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_NAVSTATE, Status.NAVIGATION_STATE_AUTO_PRECLAND, (n) -> {
@@ -417,15 +348,15 @@ public class StartUp  {
 		}
 
 
-		if(pose == null && control.isSimulation()) {
-			try {
-				pose = new MAVGazeboVisPositionEstimator(control);
-				pose.start();
-				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-			} catch(UnsatisfiedLinkError | Exception e ) {
-				System.out.println("Gazebo vision plugin could not be started");
-			}
-		}
+//		if(pose == null && control.isSimulation()) {
+//			try {
+//				pose = new MAVGazeboVisPositionEstimator(control);
+//				pose.start();
+//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+//			} catch(UnsatisfiedLinkError | Exception e ) {
+//				System.out.println("Gazebo vision plugin could not be started");
+//			}
+//		}
 
 
 		//*** OAK-D as depth

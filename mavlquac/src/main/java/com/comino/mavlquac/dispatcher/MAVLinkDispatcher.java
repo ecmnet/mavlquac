@@ -61,18 +61,18 @@ public class MAVLinkDispatcher  {
 
 	private final HardwareAbstraction hw;
 
+	// Messages to GC
 	private final msg_msp_status      				status   = new msg_msp_status(2,1);
 	private final msg_debug_vect      				debug    = new msg_debug_vect(2,1);
 	private final msg_msp_micro_slam  				slam     = new msg_msp_micro_slam(2,1);
 	private final msg_msp_trajectory                traj 	 = new msg_msp_trajectory(2,1);
 	private final msg_msp_local_position_corrected  lposc 	 = new msg_msp_local_position_corrected(2,1);
 
+	// Messages to PX4
 	private final msg_landing_target                landing  = new msg_landing_target(1,1);
 
 	private boolean publish_microslam;
 	private boolean publish_debug;
-
-	private long    init_tms = System.currentTimeMillis();
 
 	// Rework using WorkQueue!
 	private final WorkQueue wq = WorkQueue.getInstance();
@@ -235,10 +235,6 @@ public class MAVLinkDispatcher  {
 			status.com_error = control.getErrorCount();
 			status.takeoff_ms = model.sys.t_takeoff_ms;
 			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
-			//			if(model.sys.t_boot_ms > 0)
-			//				status.uptime_ms = model.sys.t_boot_ms;
-			//			else
-			//				status.uptime_ms = System.currentTimeMillis() - init_tms;
 			status.uptime_ms = DataModel.getBootTime();
 			status.status = control.getCurrentModel().sys.getStatus();
 			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
@@ -253,8 +249,6 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_500ms implements Runnable {
 		@Override
 		public void run() {
-
-
 		}
 
 	}
