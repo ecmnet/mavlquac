@@ -39,6 +39,7 @@ import org.mavlink.messages.lquac.msg_debug_vect;
 import org.mavlink.messages.lquac.msg_landing_target;
 import org.mavlink.messages.lquac.msg_msp_local_position_corrected;
 import org.mavlink.messages.lquac.msg_msp_micro_slam;
+import org.mavlink.messages.lquac.msg_msp_obstacle;
 import org.mavlink.messages.lquac.msg_msp_status;
 import org.mavlink.messages.lquac.msg_msp_trajectory;
 
@@ -65,6 +66,7 @@ public class MAVLinkDispatcher  {
 	private final msg_msp_status      				status   = new msg_msp_status(2,1);
 	private final msg_debug_vect      				debug    = new msg_debug_vect(2,1);
 	private final msg_msp_micro_slam  				slam     = new msg_msp_micro_slam(2,1);
+	private final msg_msp_obstacle  				obs      = new msg_msp_obstacle(2,1);
 	private final msg_msp_trajectory                traj 	 = new msg_msp_trajectory(2,1);
 	private final msg_msp_local_position_corrected  lposc 	 = new msg_msp_local_position_corrected(2,1);
 
@@ -152,15 +154,22 @@ public class MAVLinkDispatcher  {
 			if(publish_microslam && ( model.slam.fps > 0 || control.isSimulation())) {
 
 
+				if(Float.isFinite(model.slam.ox)) {
+					model.slam.dm = (float)Math.sqrt(
+							(model.state.l_x - model.slam.ox) * (model.state.l_x - model.slam.ox) +
+							(model.state.l_y - model.slam.oy) * (model.state.l_y - model.slam.oy) +
+							(model.state.l_z - model.slam.oz) * (model.state.l_z - model.slam.oz)
+							);
+				} else
+					model.slam.dm = Float.NaN;
+
+
 				slam.ix = model.slam.ix;
 				slam.iy = model.slam.iy;
 				slam.iz = model.slam.iz;
 				slam.md = model.slam.di;
 				slam.mw = model.slam.dw;
-				slam.dm = model.slam.dm;
-				slam.ox = model.slam.ox;
-				slam.oy = model.slam.oy;
-				slam.oz = model.slam.oz;
+
 
 				slam.quality = model.slam.quality;
 				slam.wpcount = model.slam.wpcount;
@@ -241,6 +250,17 @@ public class MAVLinkDispatcher  {
 			status.setArch(hw.getArchName());
 			status.unix_time_us = DataModel.getUnixTime_us();
 			control.sendMAVLinkMessage(status);
+
+
+			// Obstacles 
+
+			obs.id  = 1;
+			obs.dm  = model.slam.dm;
+			obs.ox  = model.slam.ox;
+			obs.oy  = model.slam.oy;
+			obs.oz  = model.slam.oz;
+			obs.tms = DataModel.getSynchronizedPX4Time_us();
+			control.sendMAVLinkMessage(obs);
 
 
 		}
