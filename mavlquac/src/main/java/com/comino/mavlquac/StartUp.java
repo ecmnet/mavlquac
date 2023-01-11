@@ -42,6 +42,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import org.bytedeco.javacpp.Loader;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
 
@@ -115,12 +116,20 @@ public class StartUp  {
 		// NVJPEG CUDA TEST
 		//SampleJpeg.test();
 		
+		
 		try { Thread.sleep(1000); } catch(Exception e) { }
 
 
 		addShutdownHook();
 
 		this.hw = HardwareAbstraction.instance();
+		
+		try {
+			System.out.println("Platform: "+Loader.getPlatform()+" JavaCPP version: "+Loader.getVersion());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 		BoofConcurrency.setMaxThreads(4);
 		//	BoofConcurrency.USE_CONCURRENT = false;
@@ -137,6 +146,9 @@ public class StartUp  {
 			else if(args[0].contains("log")) {
 				redirectConsole();
 				mode = MAVController.MODE_NORMAL;
+			}
+			else if(args[0].contains("VM")) {
+				mode = MAVController.MODE_SITL_PROXY;
 			}
 			else  
 				mode = MAVController.MODE_NORMAL;
@@ -189,17 +201,20 @@ public class StartUp  {
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
 		
-		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) {
+		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true") && Loader.getPlatform().indexOf("macosx-arm") < 0) {
 			startOdometry();
+		} else {
+			System.out.println("MSP Odometry not started.");
 		}
 
 		// Setup WorkQueues and start them
-		
-		wq.start();
+	
 		
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
 		wq.addSingleTask("LP", 100,  new initPX4());
+		
+		wq.start();
 
 		
 		//control.connect();
@@ -256,6 +271,10 @@ public class StartUp  {
 					commander.getAutopilot().invalidate_map_transfer();
 					break;
 				case MSP_CMD.SELECT_VIDEO_STREAM:
+					
+					if(streamer==null)
+						return;
+					
 					switch((int)cmd.param1) {
 					case 0:
 						streamer.enableStream("RGB+DOWN");
@@ -294,7 +313,8 @@ public class StartUp  {
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS,Status.MSP_ARMED, StatusManager.EDGE_FALLING, (n) -> {
 			if(stream_auto_switched) {
 				stream_auto_switched = false;
-				streamer.enableStream("RGB+DOWN");	
+				if(streamer!=null)
+				  streamer.enableStream("RGB+DOWN");	
 			}
 		});
 
@@ -369,7 +389,7 @@ public class StartUp  {
 				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
 
 			} catch (Exception e) {
-				if(!control.isSimulation())
+			//	if(!control.isSimulation())
 					e.printStackTrace();
 				depth=null;
 				System.out.println("No OAKD-Lite device found");
