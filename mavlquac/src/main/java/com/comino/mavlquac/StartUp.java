@@ -115,15 +115,15 @@ public class StartUp  {
 
 		// NVJPEG CUDA TEST
 		//SampleJpeg.test();
-		
-		
+
+
 		try { Thread.sleep(1000); } catch(Exception e) { }
 
 
 		addShutdownHook();
 
 		this.hw = HardwareAbstraction.instance();
-		
+
 		try {
 			System.out.println("Platform: "+Loader.getPlatform()+" JavaCPP version: "+Loader.getVersion());
 		} catch (IOException e) {
@@ -179,12 +179,12 @@ public class StartUp  {
 			control = new MAVProxyController(mode, config);
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
-		
+
 		MSPStringUtils.getInstance(control.isSimulation());
-		
+
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
-		
+
 		params = PX4Parameters.getInstance(control);
 
 		model = control.getCurrentModel();
@@ -194,31 +194,34 @@ public class StartUp  {
 
 		registerActions();
 		registerCommands();
-		
+
 		Console console = new Console(control);
 		console.registerCmd("rate", () -> System.out.println(streamer.toString()));
 
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
-		
+
 		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true") && Loader.getPlatform().indexOf("macosx-arm") < 0) {
-			startOdometry();
+//			if(control.isSimulation())
+//				startSimOdometry();
+//			else
+				startOdometry();
 		} else {
 			System.out.println("MSP Odometry not started.");
 		}
 
 		// Setup WorkQueues and start them
-	
-		
+
+
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
 		wq.addSingleTask("LP", 100,  new initPX4());
-		
+
 		wq.start();
 
-		
+
 		//control.connect();
-        control.start();
+		control.start();
 
 		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
 
@@ -271,10 +274,10 @@ public class StartUp  {
 					commander.getAutopilot().invalidate_map_transfer();
 					break;
 				case MSP_CMD.SELECT_VIDEO_STREAM:
-					
+
 					if(streamer==null)
 						return;
-					
+
 					switch((int)cmd.param1) {
 					case 0:
 						streamer.enableStream("RGB+DOWN");
@@ -308,17 +311,66 @@ public class StartUp  {
 				streamer.enableStream("DOWN+RGB");	
 			stream_auto_switched = true;
 		});
-		
+
 		// switch back to FPV is previsously switched to down view
 		control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS,Status.MSP_ARMED, StatusManager.EDGE_FALLING, (n) -> {
 			if(stream_auto_switched) {
 				stream_auto_switched = false;
 				if(streamer!=null)
-				  streamer.enableStream("RGB+DOWN");	
+					streamer.enableStream("RGB+DOWN");	
 			}
 		});
 
 	}
+
+//	private void startSimOdometry() {
+//
+//		model.vision.clear();
+//
+//		System.out.println("Start Gazebo odometry");
+//
+//		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+//		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+//
+//		streamer.registerNoVideoListener(() -> {
+//			if(pose!=null)  
+//				pose.enableStream(true);  
+//			else if(depth!=null) 
+//				depth.enableStream(true);
+//		});
+//
+//		//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
+//		//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
+//		//				streamer.stop();
+//		//			}
+//		//		});
+//
+//
+//		try {
+//			((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
+//		} catch (Exception e1) {
+//			// TODO Auto-generated catch block
+//			if(!control.isSimulation())
+//				e1.printStackTrace();
+//		}
+//
+//		model.vision.setStatus(Vision.VIDEO_ENABLED, false);
+//
+//		if(depth==null && control.isSimulation()) {
+//			try {
+//				depth = new MAVGazeboDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+//				depth.start();
+//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+//
+//			} catch (Exception e) {
+//				System.out.println("No depth simulation found");
+//			}
+//
+//		}
+//
+//		streamer.enableStream("DEPTH");
+//
+//	}
 
 	private void startOdometry() {
 
@@ -328,7 +380,7 @@ public class StartUp  {
 
 		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
 		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-		
+
 		streamer.registerNoVideoListener(() -> {
 			if(pose!=null)  
 				pose.enableStream(true);  
@@ -359,8 +411,8 @@ public class StartUp  {
 			pose.start();
 			pose.enableStream(true);
 			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-			
-			
+
+
 
 		} catch(UnsatisfiedLinkError | Exception e ) {
 			pose = null;
@@ -368,15 +420,15 @@ public class StartUp  {
 		}
 
 
-//		if(pose == null && control.isSimulation()) {
-//			try {
-//				pose = new MAVGazeboVisPositionEstimator(control);
-//				pose.start();
-//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-//			} catch(UnsatisfiedLinkError | Exception e ) {
-//				System.out.println("Gazebo vision plugin could not be started");
-//			}
-//		}
+		//		if(pose == null && control.isSimulation()) {
+		//			try {
+		//				pose = new MAVGazeboVisPositionEstimator(control);
+		//				pose.start();
+		//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+		//			} catch(UnsatisfiedLinkError | Exception e ) {
+		//				System.out.println("Gazebo vision plugin could not be started");
+		//			}
+		//		}
 
 
 		//*** OAK-D as depth
@@ -389,25 +441,13 @@ public class StartUp  {
 				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
 
 			} catch (Exception e) {
-			//	if(!control.isSimulation())
-					e.printStackTrace();
+				//	if(!control.isSimulation())
+				//		e.printStackTrace();
 				depth=null;
 				System.out.println("No OAKD-Lite device found");
 			}
 
 		}
-
-		//		if(depth==null && control.isSimulation()) {
-		//			try {
-		//				depth = new MAVSimDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-		//				depth.start();
-		//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-		//
-		//			} catch (Exception e) {
-		//				System.out.println("No depth simulation found");
-		//			}
-		//
-		//		}
 
 
 		//*** OAK-D as simple Camera

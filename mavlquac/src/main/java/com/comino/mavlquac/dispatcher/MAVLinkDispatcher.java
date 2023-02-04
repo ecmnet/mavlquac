@@ -213,18 +213,18 @@ public class MAVLinkDispatcher  {
 
 			}
 
-			// Send Local position corrected message to GC
-			if(model.state.l_rx != 0 || model.state.l_ry != 0 || model.state.l_rz != 0) {
-				lposc.counter = model.est.reset_counter;
-				lposc.cx      = model.state.l_rx;
-				lposc.cy      = model.state.l_ry;
-				lposc.cz      = model.state.l_rz;
-				lposc.gx      = model.vision.gx;
-				lposc.gy      = model.vision.gy;
-				lposc.gz      = model.vision.gz;
-				lposc.tms     = DataModel.getSynchronizedPX4Time_us();
-				control.sendMAVLinkMessage(lposc);
-			}
+//			// Send Local position corrected message to GC
+//			if(model.state.l_rx != 0 || model.state.l_ry != 0 || model.state.l_rz != 0) {
+//				lposc.counter = model.est.reset_counter;
+//				lposc.cx      = model.state.l_rx;
+//				lposc.cy      = model.state.l_ry;
+//				lposc.cz      = model.state.l_rz;
+//				lposc.gx      = model.vision.gx;
+//				lposc.gy      = model.vision.gy;
+//				lposc.gz      = model.vision.gz;
+//				lposc.tms     = DataModel.getSynchronizedPX4Time_us();
+//				control.sendMAVLinkMessage(lposc);
+//			}
 		}
 	}
 
