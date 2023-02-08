@@ -194,8 +194,16 @@ public class StartUp  {
 		
 		try {
 			ftpServer = MAVFtpServerFactory.createAndStart();
+			
+			control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS, Status.MSP_ARMED, (n) -> {
+				if(n.isStatus(Status.MSP_ARMED))
+					ftpServer.suspend();
+				else
+					ftpServer.resume();
+			});
+			
 		} catch (FtpException e) {
-			e.printStackTrace();
+			System.out.println(e.getMessage());
 		}
 
 		params = PX4Parameters.getInstance(control);

@@ -29,7 +29,7 @@ public class MAVFtpServerFactory {
 		
 		boolean enabled = config.getBoolProperty("ftp_enabled", "true");
 		if(!enabled)
-			return null;
+			throw new FtpException("FTP server not enabled");
 		
 		String user      = config.getProperty("ftp_user", "lquac");
 		String pwd       = config.getProperty("ftp_pwd",  "lquac");
