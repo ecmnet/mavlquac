@@ -41,11 +41,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.Executors;
 
+import org.apache.ftpserver.FtpServer;
+import org.apache.ftpserver.ftplet.FtpException;
 import org.bytedeco.javacpp.Loader;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
 
+import com.comino.gazebo.estimators.MAVGazeboDepthEstimator;
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
 import com.comino.mavcom.control.IMAVMSPController;
@@ -61,6 +65,7 @@ import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
+import com.comino.mavlquac.ftpserver.MAVFtpServerFactory;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
@@ -109,6 +114,8 @@ public class StartUp  {
 
 
 	private final HardwareAbstraction hw;
+
+	private FtpServer ftpServer;
 
 
 	public StartUp(String[] args) {
@@ -184,6 +191,12 @@ public class StartUp  {
 
 		logger = MSPLogger.getInstance(control);
 		logger.enableDebugMessages(true);
+		
+		try {
+			ftpServer = MAVFtpServerFactory.createAndStart();
+		} catch (FtpException e) {
+			e.printStackTrace();
+		}
 
 		params = PX4Parameters.getInstance(control);
 
@@ -202,10 +215,11 @@ public class StartUp  {
 
 
 		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true") && Loader.getPlatform().indexOf("macosx-arm") < 0) {
-//			if(control.isSimulation())
-//				startSimOdometry();
-//			else
-				startOdometry();
+			if(control.isSimulation()) {
+				startSimOdometry();
+			}
+			else
+			    startOdometry();
 		} else {
 			System.out.println("MSP Odometry not started.");
 		}
@@ -247,6 +261,9 @@ public class StartUp  {
 				control.shutdown();
 				//wq.printStatus();
 				wq.stop();
+				
+				if(ftpServer!=null)
+				   ftpServer.stop();
 
 				if(pose!=null)
 					pose.stop();
@@ -323,54 +340,54 @@ public class StartUp  {
 
 	}
 
-//	private void startSimOdometry() {
-//
-//		model.vision.clear();
-//
-//		System.out.println("Start Gazebo odometry");
-//
-//		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
-//		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-//
-//		streamer.registerNoVideoListener(() -> {
-//			if(pose!=null)  
-//				pose.enableStream(true);  
-//			else if(depth!=null) 
-//				depth.enableStream(true);
-//		});
-//
-//		//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
-//		//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
-//		//				streamer.stop();
-//		//			}
-//		//		});
-//
-//
-//		try {
-//			((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
-//		} catch (Exception e1) {
-//			// TODO Auto-generated catch block
-//			if(!control.isSimulation())
-//				e1.printStackTrace();
-//		}
-//
-//		model.vision.setStatus(Vision.VIDEO_ENABLED, false);
-//
-//		if(depth==null && control.isSimulation()) {
-//			try {
-//				depth = new MAVGazeboDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-//				depth.start();
-//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-//
-//			} catch (Exception e) {
-//				System.out.println("No depth simulation found");
-//			}
-//
-//		}
-//
-//		streamer.enableStream("DEPTH");
-//
-//	}
+		private void startSimOdometry() {
+	
+			model.vision.clear();
+	
+			System.out.println("Start Gazebo odometry..");
+	
+			streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+	
+			streamer.registerNoVideoListener(() -> {
+				if(pose!=null)  
+					pose.enableStream(true);  
+				else if(depth!=null) 
+					depth.enableStream(true);
+			});
+	
+			//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
+			//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
+			//				streamer.stop();
+			//			}
+			//		});
+	
+	
+			try {
+				((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				if(!control.isSimulation())
+					e1.printStackTrace();
+			}
+	
+			model.vision.setStatus(Vision.VIDEO_ENABLED, false);
+	
+			if(depth==null && control.isSimulation()) {
+				try {
+					depth = new MAVGazeboDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+					depth.start();
+					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+	
+				} catch (Exception e) {
+					System.out.println("No depth simulation found");
+				}
+	
+			}
+	
+			streamer.enableStream("DEPTH");
+	
+		}
 
 	private void startOdometry() {
 
