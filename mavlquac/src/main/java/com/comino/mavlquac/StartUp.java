@@ -49,7 +49,6 @@ import org.bytedeco.javacpp.Loader;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
 
-import com.comino.gazebo.estimators.MAVGazeboDepthEstimator;
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
 import com.comino.mavcom.control.IMAVMSPController;
@@ -352,48 +351,48 @@ public class StartUp  {
 	
 			model.vision.clear();
 	
-			System.out.println("Start Gazebo odometry..");
-	
-			streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
-			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-	
-			streamer.registerNoVideoListener(() -> {
-				if(pose!=null)  
-					pose.enableStream(true);  
-				else if(depth!=null) 
-					depth.enableStream(true);
-			});
-	
-			//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
-			//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
-			//				streamer.stop();
-			//			}
-			//		});
-	
-	
-			try {
-				((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
-			} catch (Exception e1) {
-				// TODO Auto-generated catch block
-				if(!control.isSimulation())
-					e1.printStackTrace();
-			}
-	
-			model.vision.setStatus(Vision.VIDEO_ENABLED, false);
-	
-			if(depth==null && control.isSimulation()) {
-				try {
-					depth = new MAVGazeboDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-					depth.start();
-					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-	
-				} catch (Exception e) {
-					System.out.println("No depth simulation found");
-				}
-	
-			}
-	
-			streamer.enableStream("DEPTH");
+//			System.out.println("Start Gazebo odometry..");
+//	
+//			streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+//			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+//	
+//			streamer.registerNoVideoListener(() -> {
+//				if(pose!=null)  
+//					pose.enableStream(true);  
+//				else if(depth!=null) 
+//					depth.enableStream(true);
+//			});
+//	
+//			//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
+//			//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
+//			//				streamer.stop();
+//			//			}
+//			//		});
+//	
+//	
+//			try {
+//				((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
+//			} catch (Exception e1) {
+//				// TODO Auto-generated catch block
+//				if(!control.isSimulation())
+//					e1.printStackTrace();
+//			}
+//	
+//			model.vision.setStatus(Vision.VIDEO_ENABLED, false);
+//	
+//			if(depth==null && control.isSimulation()) {
+//				try {
+//					depth = new MAVGazeboDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+//					depth.start();
+//					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+//	
+//				} catch (Exception e) {
+//					System.out.println("No depth simulation found");
+//				}
+//	
+//			}
+//	
+//			streamer.enableStream("DEPTH");
 	
 		}
 
