@@ -2,24 +2,17 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-
-
 	<groupId>com.comino</groupId>
 	<artifactId>mavlquac</artifactId>
 	<version>0.0.1</version>
 	<packaging>jar</packaging>
-
 	<name>mavlquac</name>
 	<url>http://maven.apache.org</url>
-	
-	
-
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.target>1.10</maven.compiler.target>
 		<maven.compiler.source>1.10</maven.compiler.source>
 	</properties>
-
 	<!--	
 	<repositories>
 	<repository>
@@ -61,14 +54,31 @@
 			<artifactId>mavutils</artifactId>
 			<version>0.0.1</version>
 		</dependency>
-        <dependency>
-          <groupId>com.google.protobuf</groupId>
-          <artifactId>protobuf-java</artifactId>
-          <version>3.19.6</version>
-        </dependency>
-
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+			<version>3.19.6</version>
+		</dependency>
+		<!--
+		<dependency>
+			<groupId>com.comino</groupId>
+			<artifactId>mavgazebo</artifactId>
+			<version>0.0.1</version>
+		</dependency>
+		-->
+		<dependency>
+			<groupId>org.apache.ftpserver</groupId>
+			<artifactId>ftpserver-core</artifactId>
+			<version>1.0.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-nop</artifactId>
+			<version>1.5.2</version>
+		</dependency>
 	</dependencies>
-
+	
+	
 	<build>
 		<plugins>
 			<plugin>
@@ -90,7 +100,6 @@
 					</execution>
 				</executions>
 			</plugin>
-
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<configuration>
@@ -113,10 +122,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			
-			
 		</plugins>
 	</build>
-
-
 </project>
