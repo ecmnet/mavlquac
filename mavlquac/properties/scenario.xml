@@ -1,0 +1,42 @@
+<scenario>
+	<name>Oberhofen_0223</name>
+	<description>Fly 3 squares of 1.5m side-length and land via fiducial</description>
+	<max_speed>1.0</max_speed>
+	<time_factor>1</time_factor>
+	<steps>
+		<arm />
+		<fiducial>
+			<position_local x="0.0" y="0.0" z="0.0" />
+		</fiducial>
+		<takeoff>
+			<altitude a="1.50" />
+		</takeoff>
+		<rotate>
+			<angle a="180" />
+		</rotate>
+		<moveto>
+			<position_local x="-0.75" y="-0.75" z="NaN" w="180" />
+			<acceptance_radius r="0.15" />
+		</moveto>
+		<loop c="3">
+			<moveto>
+				<position_local x="-0.75" y="0.75" z="NaN" w="180" />
+				<acceptance_radius r="0.15" />
+			</moveto>
+			<moveto>
+				<position_local x="0.75" y="0.75" z="NaN" w="180" />
+				<acceptance_radius r="0.15" />
+			</moveto>
+			<moveto>
+				<position_local x="0.75" y="-0.75" z="NaN" w="180" />
+				<acceptance_radius r="0.10" />
+			</moveto>
+			<moveto>
+				<position_local x="-0.75" y="-0.75" z="NaN" w="180" />
+				<acceptance_radius r="0.15" />
+			</moveto>
+		</loop>
+		<precision_land />
+		<disarm />
+	</steps>
+</scenario>
