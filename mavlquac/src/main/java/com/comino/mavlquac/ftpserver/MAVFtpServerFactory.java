@@ -34,7 +34,9 @@ public class MAVFtpServerFactory {
 		String user      = config.getProperty("ftp_user", "lquac");
 		String pwd       = config.getProperty("ftp_pwd",  "lquac");
 		int    port      = config.getIntProperty("ftp_port", "21");
-		String homeDir   = config.getProperty("ftp_home","properties");
+		String homeDir   = config.getProperty("ftp_home",MSPConfig.getInstance().getBasePath());
+		
+		System.out.println("FTP home directory is: "+homeDir);
 		
 		File fhd = new File( homeDir );
 		if( !fhd.exists() ) fhd.mkdirs();
