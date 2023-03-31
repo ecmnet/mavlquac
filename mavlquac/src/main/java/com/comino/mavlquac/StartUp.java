@@ -41,10 +41,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
-import java.util.concurrent.Executors;
 
 import org.apache.ftpserver.FtpServer;
-import org.apache.ftpserver.ftplet.FtpException;
 import org.bytedeco.javacpp.Loader;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
@@ -137,7 +135,7 @@ public class StartUp  {
 			e.printStackTrace();
 		}
 
-		BoofConcurrency.setMaxThreads(4);
+//		BoofConcurrency.setMaxThreads(4);
 		//	BoofConcurrency.USE_CONCURRENT = false;
 
 		ExecutorService.create();
@@ -185,6 +183,7 @@ public class StartUp  {
 			control = new MAVProxyController(mode, config);
 			System.out.println("MSPControlService (LQUAC simulation) version "+config.getVersion()+" Mode = "+mode);
 		}
+		
 
 		MSPStringUtils.getInstance(control.isSimulation());
 
@@ -194,14 +193,14 @@ public class StartUp  {
 		try {
 			ftpServer = MAVFtpServerFactory.createAndStart();
 			
-			control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS, Status.MSP_ARMED, (n) -> {
-				if(n.isStatus(Status.MSP_ARMED))
-					ftpServer.suspend();
-				else
-					ftpServer.resume();
-			});
+//			control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS, Status.MSP_ARMED, (n) -> {
+//				if(n.isStatus(Status.MSP_ARMED))
+//					ftpServer.suspend();
+//				else
+//					ftpServer.resume();
+//			});
 			
-		} catch (FtpException e) {
+		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
 
@@ -255,7 +254,7 @@ public class StartUp  {
 		//		System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
 		//		System.setProperty("org.bytedeco.javacpp.nopointergc", "true");
 
-
+		
 		new StartUp(args);
 
 	}
@@ -295,7 +294,7 @@ public class StartUp  {
 				msg_msp_command cmd = (msg_msp_command)o;
 				switch(cmd.command) {
 				case MSP_CMD.MSP_TRANSFER_MICROSLAM:
-					commander.getAutopilot().invalidate_map_transfer();
+					commander.getAutopilot().getMapper().invalidate_map_transfer();
 					break;
 				case MSP_CMD.SELECT_VIDEO_STREAM:
 
@@ -459,7 +458,7 @@ public class StartUp  {
 		if(depth==null) {
 			try {
 				//			depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-				depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer); 
+				depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMapper().getShorTermMap(),WIDTH,HEIGHT, streamer); 
 				depth.start();
 				depth.enableStream(true);
 				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
@@ -545,7 +544,7 @@ public class StartUp  {
 	private class initPX4 implements Runnable {
 
 
-		@Override
+		@Override 
 		public void run() {
 			if((mode==MAVController.MODE_NORMAL || mode==MAVController.MODE_USB)  && model.sys.isStatus(Status.MSP_CONNECTED)) {
 				System.out.println("Execute init PX4");
