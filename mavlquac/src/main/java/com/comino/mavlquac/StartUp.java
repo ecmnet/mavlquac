@@ -66,7 +66,9 @@ import com.comino.mavlquac.ftpserver.MAVFtpServerFactory;
 import com.comino.mavodometry.estimators.MAVAbstractEstimator;
 import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
+import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
+import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamCVMjpegHandler;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamMjpegHandler;
 import com.comino.mavutils.MSPStringUtils;
 import com.comino.mavutils.file.MSPFileUtils;
@@ -93,14 +95,14 @@ public class StartUp  {
 	MSPConfig	          config    = null;
 	MAVLinkDispatcher    dispatcher = null;
 
-	private RTSPMultiStreamMjpegHandler<Planar<GrayU8>> streamer = null;
+	private IVisualStreamHandler<Planar<GrayU8>> streamer = null;
 
 	private MSPCommander  commander = null;
 	private DataModel     model     = null;
 
 	private MAVAbstractEstimator pose  = null;
 	private MAVAbstractEstimator depth = null;
-	private MAVAbstractEstimator flow  = null;
+	
 
 
 	private int mode;
@@ -227,7 +229,7 @@ public class StartUp  {
 			else
 			    startOdometry();
 		} else {
-			System.out.println("MSP Odometry not started.");
+			System.err.println("MSP Odometry not started.");
 		}
 
 		// Setup WorkQueues and start them
@@ -349,47 +351,50 @@ public class StartUp  {
 		private void startSimOdometry() {
 	
 			model.vision.clear();
+			System.err.println("Start odometry (Simulation) ");
+			
 	
-//			System.out.println("Start Gazebo odometry..");
-//	
-//			streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
-//			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-//	
-//			streamer.registerNoVideoListener(() -> {
-//				if(pose!=null)  
-//					pose.enableStream(true);  
-//				else if(depth!=null) 
-//					depth.enableStream(true);
-//			});
-//	
-//			//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
-//			//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
-//			//				streamer.stop();
-//			//			}
-//			//		});
-//	
-//	
-//			try {
-//				((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
-//			} catch (Exception e1) {
-//				// TODO Auto-generated catch block
-//				if(!control.isSimulation())
-//					e1.printStackTrace();
-//			}
-//	
-//			model.vision.setStatus(Vision.VIDEO_ENABLED, false);
-//	
-//			if(depth==null && control.isSimulation()) {
-//				try {
-//					depth = new MAVGazeboDepthEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-//					depth.start();
-//					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-//	
-//				} catch (Exception e) {
-//					System.out.println("No depth simulation found");
-//				}
-//	
-//			}
+			streamer = new RTSPMultiStreamCVMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+	
+			streamer.registerNoVideoListener(() -> {
+				if(pose!=null)  
+					pose.enableStream(true);  
+				else if(depth!=null) 
+					depth.enableStream(true);
+			});
+	
+			//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
+			//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
+			//				streamer.stop();
+			//			}
+			//		});
+	
+	
+			try {
+				((RTSPMultiStreamCVMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				if(!control.isSimulation())
+					e1.printStackTrace();
+			}
+			
+			if(depth==null) {
+				try {
+					//			depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
+					depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMapper().getShorTermMap(),WIDTH,HEIGHT, streamer); 
+					depth.start();
+					depth.enableStream(true);
+					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+
+				} catch (Exception e) {
+					//	if(!control.isSimulation())
+					//		e.printStackTrace();
+					depth=null;
+					System.out.println("No OAKD-Lite device found");
+				}
+
+			}
 //	
 //			streamer.enableStream("DEPTH");
 	
@@ -399,7 +404,7 @@ public class StartUp  {
 
 		model.vision.clear();
 
-		System.out.println("Start odometry");
+		System.err.println("Start odometry");
 
 		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
 		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));

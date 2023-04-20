@@ -120,6 +120,37 @@ public class MAVLinkDispatcher  {
 				control.sendMAVLinkMessage(debug);
 			}
 
+			// Trajectory publishing	
+			if(model.slam.isFlag(Slam.OFFBOARD_FLAG_XYZ_PLANNER)) {
+
+				traj.ls = model.traj.ls;
+				traj.fs = model.traj.fs;
+
+				traj.ax = model.traj.ax;
+				traj.ay = model.traj.ay;
+				traj.az = model.traj.az;
+				traj.bx = model.traj.bx;
+				traj.by = model.traj.by;	
+				traj.bz = model.traj.bz;	
+				traj.gx = model.traj.gx;
+				traj.gy = model.traj.gy;	
+				traj.gz = model.traj.gz;	
+				traj.sx = model.traj.sx;
+				traj.sy = model.traj.sy;	
+				traj.sz = model.traj.sz;	
+				traj.svx = model.traj.svx;
+				traj.svy = model.traj.svy;
+				traj.svz = model.traj.svz;
+				traj.sax = model.traj.sax;
+				traj.say = model.traj.say;
+				traj.saz = model.traj.saz;
+
+				traj.tms = model.traj.tms;
+
+				control.sendMAVLinkMessage(traj);
+
+			}
+
 		}
 	}
 
@@ -154,11 +185,11 @@ public class MAVLinkDispatcher  {
 			if(publish_microslam && ( model.slam.fps > 0 || control.isSimulation())) {
 
 
-				if(Float.isFinite(model.slam.ox)) {
+				if(Float.isFinite(model.obs.x)) {
 					model.slam.dm = (float)Math.sqrt(
-							(model.state.l_x - model.slam.ox) * (model.state.l_x - model.slam.ox) +
-							(model.state.l_y - model.slam.oy) * (model.state.l_y - model.slam.oy) +
-							(model.state.l_z - model.slam.oz) * (model.state.l_z - model.slam.oz)
+							(model.state.l_x - model.obs.x) * (model.state.l_x - model.obs.x) +
+							(model.state.l_y - model.obs.y) * (model.state.l_y - model.obs.y) +
+							(model.state.l_z - model.obs.z) * (model.state.l_z - model.obs.z)
 							);
 				} else
 					model.slam.dm = Float.NaN;
@@ -181,50 +212,19 @@ public class MAVLinkDispatcher  {
 
 
 
-			// Trajectory publishing	
 
-			if(model.slam.isFlag(Slam.OFFBOARD_FLAG_XYZ_PLANNER)) {
-
-				traj.ls = model.traj.ls;
-				traj.fs = model.traj.fs;
-
-				traj.ax = model.traj.ax;
-				traj.ay = model.traj.ay;
-				traj.az = model.traj.az;
-				traj.bx = model.traj.bx;
-				traj.by = model.traj.by;	
-				traj.bz = model.traj.bz;	
-				traj.gx = model.traj.gx;
-				traj.gy = model.traj.gy;	
-				traj.gz = model.traj.gz;	
-				traj.sx = model.traj.sx;
-				traj.sy = model.traj.sy;	
-				traj.sz = model.traj.sz;	
-				traj.svx = model.traj.svx;
-				traj.svy = model.traj.svy;
-				traj.svz = model.traj.svz;
-				traj.sax = model.traj.sax;
-				traj.say = model.traj.say;
-				traj.saz = model.traj.saz;
-
-				traj.tms = model.traj.tms;
-
-				control.sendMAVLinkMessage(traj);
-
-			}
-
-//			// Send Local position corrected message to GC
-//			if(model.state.l_rx != 0 || model.state.l_ry != 0 || model.state.l_rz != 0) {
-//				lposc.counter = model.est.reset_counter;
-//				lposc.cx      = model.state.l_rx;
-//				lposc.cy      = model.state.l_ry;
-//				lposc.cz      = model.state.l_rz;
-//				lposc.gx      = model.vision.gx;
-//				lposc.gy      = model.vision.gy;
-//				lposc.gz      = model.vision.gz;
-//				lposc.tms     = DataModel.getSynchronizedPX4Time_us();
-//				control.sendMAVLinkMessage(lposc);
-//			}
+			//			// Send Local position corrected message to GC
+			//			if(model.state.l_rx != 0 || model.state.l_ry != 0 || model.state.l_rz != 0) {
+			//				lposc.counter = model.est.reset_counter;
+			//				lposc.cx      = model.state.l_rx;
+			//				lposc.cy      = model.state.l_ry;
+			//				lposc.cz      = model.state.l_rz;
+			//				lposc.gx      = model.vision.gx;
+			//				lposc.gy      = model.vision.gy;
+			//				lposc.gz      = model.vision.gz;
+			//				lposc.tms     = DataModel.getSynchronizedPX4Time_us();
+			//				control.sendMAVLinkMessage(lposc);
+			//			}
 		}
 	}
 
@@ -256,9 +256,12 @@ public class MAVLinkDispatcher  {
 
 			obs.id  = 1;
 			obs.dm  = model.slam.dm;
-			obs.ox  = model.slam.ox;
-			obs.oy  = model.slam.oy;
-			obs.oz  = model.slam.oz;
+			obs.ox  = model.obs.x;
+			obs.oy  = model.obs.y;
+			obs.oz  = model.obs.z;
+			obs.dx  = model.obs.sx;
+			obs.dy  = model.obs.sy;
+			obs.dz  = model.obs.sz;
 			obs.tms = DataModel.getSynchronizedPX4Time_us();
 			control.sendMAVLinkMessage(obs);
 
