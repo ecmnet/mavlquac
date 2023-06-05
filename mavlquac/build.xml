@@ -14,56 +14,56 @@
 	<target name="com" >
 		<exec dir="${workspace.dir}/MAVCom/mavcom" executable="sh">
 			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
-			<arg line="-c '/usr/local/Cellar/maven/3.9.0/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
 	<target name="map" >
 		<exec dir="${workspace.dir}/MAVMap/mavmap" executable="sh">
 			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
-			<arg line="-c '/usr/local/Cellar/maven/3.9.0/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
 	<target name="odometry" >
 		<exec dir="${workspace.dir}/MAVOdometry/mavodometry" executable="sh">
 			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
-			<arg line="-c '/usr/local/Cellar/maven/3.9.0/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
 	<target name="control" >
 		<exec dir="${workspace.dir}/MAVControl/mavcontrol" executable="sh">
 			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
-			<arg line="-c '/usr/local/Cellar/maven/3.9.0/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
 	<target name="utils" >
 		<exec dir="${workspace.dir}/MAVUtils/mavutils" executable="sh">
 			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
-			<arg line="-c '/usr/local/Cellar/maven/3.9.0/bin/mvn clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
 
 	<target name="lquac" depends="utils, com, map, odometry, control" >
 		<exec dir="${workspace.dir}/MAVLquac/mavlquac" executable="sh">
 			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
-			<arg line="-c '/usr/local/Cellar/maven/3.9.0/bin/mvn -Djavacpp.platform=linux-arm64 clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn -Djavacpp.platform=linux-arm64 clean install -amd'" />
 		</exec>
 	</target>
 	
 	<target name="lquac_linux" depends="utils, com, map, odometry, control" >
 			<exec dir="${workspace.dir}/MAVLquac/mavlquac" executable="sh">
 				<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
-				<arg line="-c '/usr/local/Cellar/maven/3.9.0/bin/mvn -Djavacpp.platform=linux-x86_64 clean install -amd'" />
+				<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn -Djavacpp.platform=linux-x86_64 -DuniqueVersion=false clean install -amd'" />
 			</exec>
 	</target>
 	
 	<target name="lquac_osx" depends="utils, com, map, odometry, control" >
 		<exec dir="${workspace.dir}/MAVLquac/mavlquac" executable="sh">
 			<env key="JAVA_HOME" path="//usr/local/Cellar/openjdk/19.0.1"/>
-			<arg line="-c '/usr/local/Cellar/maven/3.9.0/bin/mvn -Djavacpp.platform=macosx-x86_64 clean install -amd'" />
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn -Djavacpp.platform=macosx-x86_64 -DuniqueVersion=false clean install -amd'" />
 		</exec>
     </target>
 
