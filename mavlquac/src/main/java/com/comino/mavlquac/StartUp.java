@@ -47,6 +47,7 @@ import org.bytedeco.javacpp.Loader;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
 
+import com.comino.gazebo.estimators.MAVGazeboDepthEstimator;
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
 import com.comino.mavcom.control.IMAVMSPController;
@@ -76,7 +77,6 @@ import com.comino.mavutils.hw.HardwareAbstraction;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
 
-import boofcv.concurrency.BoofConcurrency;
 import boofcv.struct.image.GrayU8;
 import boofcv.struct.image.Planar;
 
@@ -86,9 +86,6 @@ public class StartUp  {
 
 	private static final int WIDTH  = 640;
 	private static final int HEIGHT = 480;
-
-	//	private static final int WIDTH  = 320;
-	//	private static final int HEIGHT = 240;
 
 
 	IMAVMSPController    control    = null;
@@ -136,6 +133,7 @@ public class StartUp  {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
 
 //		BoofConcurrency.setMaxThreads(4);
 		//	BoofConcurrency.USE_CONCURRENT = false;
@@ -155,6 +153,9 @@ public class StartUp  {
 			}
 			else if(args[0].contains("VM")) {
 				mode = MAVController.MODE_SITL_PROXY;
+			}
+			else if(args[0].contains("ORIN")) {
+				mode = MAVController.MODE_ORIN;
 			}
 			else  
 				mode = MAVController.MODE_NORMAL;
@@ -222,7 +223,7 @@ public class StartUp  {
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
 
-		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true") && Loader.getPlatform().indexOf("macosx-arm") < 0) {
+		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) { //&& Loader.getPlatform().indexOf("macosx-arm") < 0) {
 			if(control.isSimulation()) {
 				startSimOdometry();
 			}
@@ -354,7 +355,7 @@ public class StartUp  {
 			System.err.println("Start odometry (Simulation) ");
 			
 	
-			streamer = new RTSPMultiStreamCVMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+			streamer = new RTSPMultiStreamCVMjpegHandler<Planar<GrayU8>>(control,WIDTH,HEIGHT,control.getCurrentModel());
 			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
 	
 			streamer.registerNoVideoListener(() -> {
@@ -379,21 +380,18 @@ public class StartUp  {
 					e1.printStackTrace();
 			}
 			
-			if(depth==null) {
+			if(depth == null && control.isSimulation()) {
 				try {
-					//			depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-					depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMapper().getShorTermMap(),WIDTH,HEIGHT, streamer); 
-					depth.start();
-					depth.enableStream(true);
-					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-
+				depth = new MAVGazeboDepthEstimator(control,config,commander.getAutopilot().getMapper().getShorTermMap(),WIDTH,HEIGHT, streamer); 
+				depth.start();
+				depth.enableStream(true);
+				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+				System.out.println("Gazebo depth device found");
+				streamer.enableStream("DEPTH");
 				} catch (Exception e) {
-					//	if(!control.isSimulation())
-					//		e.printStackTrace();
 					depth=null;
-					System.out.println("No OAKD-Lite device found");
+					System.out.println("No Gazebo depth device found");
 				}
-
 			}
 //	
 //			streamer.enableStream("DEPTH");
@@ -406,7 +404,7 @@ public class StartUp  {
 
 		System.err.println("Start odometry");
 
-		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(WIDTH,HEIGHT,control.getCurrentModel());
+		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(control,WIDTH,HEIGHT,control.getCurrentModel());
 		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
 
 		streamer.registerNoVideoListener(() -> {
@@ -446,6 +444,8 @@ public class StartUp  {
 			pose = null;
 			System.out.println("No T265 device found");
 		}
+		
+		
 
 
 		//		if(pose == null && control.isSimulation()) {
@@ -476,6 +476,7 @@ public class StartUp  {
 			}
 
 		}
+		
 
 
 		//*** OAK-D as simple Camera
