@@ -9,6 +9,7 @@
 
 	<property name="deploy_up.dir" value="/Volumes/lquac" />
 	<property name="deploy_jetson.dir" value="/Volumes/ecm/lquac" />
+	<property name="deploy_ros.dir" value="/Volumes/ecmnet/lquac" />
 
 
 	<target name="com" >
@@ -31,6 +32,13 @@
 			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
 		</exec>
 	</target>
+	
+	<target name="mavjros" >
+			<exec dir="${workspace.dir}/MAVJRos/mavjros" executable="sh">
+				<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
+				<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
+			</exec>
+		</target>
 
 	<target name="control" >
 		<exec dir="${workspace.dir}/MAVControl/mavcontrol" executable="sh">
@@ -46,21 +54,21 @@
 		</exec>
 	</target>
 
-	<target name="lquac" depends="utils, com, map, odometry, control" >
+	<target name="lquac" depends="utils, com, map, odometry, mavjros, control" >
 		<exec dir="${workspace.dir}/MAVLquac/mavlquac" executable="sh">
 			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
 			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn -Djavacpp.platform=linux-arm64 clean install -amd'" />
 		</exec>
 	</target>
 	
-	<target name="lquac_linux" depends="utils, com, map, odometry, control" >
+	<target name="lquac_linux" depends="utils, com, map, odometry, mavjros, control" >
 			<exec dir="${workspace.dir}/MAVLquac/mavlquac" executable="sh">
 				<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/home"/>
 				<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn -Djavacpp.platform=linux-x86_64 -DuniqueVersion=false clean install -amd'" />
 			</exec>
 	</target>
 	
-	<target name="lquac_osx" depends="utils, com, map, odometry, control" >
+	<target name="lquac_osx" depends="utils, com, map, odometry, mavjros,control" >
 		<exec dir="${workspace.dir}/MAVLquac/mavlquac" executable="sh">
 			<env key="JAVA_HOME" path="//usr/local/Cellar/openjdk/19.0.1"/>
 			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn -Djavacpp.platform=macosx-x86_64 -DuniqueVersion=false clean install -amd'" />
@@ -106,6 +114,10 @@
 			</propertyfile>
 		    <copy file="${target.dir}/mavlquac-0.0.1-jar-with-dependencies.jar" todir="${deploy_jetson.dir}"/>
 			<copy file="${props.dir}/msp.properties" todir="${deploy_jetson.dir}"/>
+	</target>
+	
+	<target name="ros" depends="lquac">
+		 <copy file="${target.dir}/mavlquac-0.0.1-jar-with-dependencies.jar" todir="${deploy_ros.dir}"/>
 	</target>
 
 	<target name="build"  depends="lquac">

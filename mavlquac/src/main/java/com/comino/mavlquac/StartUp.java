@@ -47,7 +47,6 @@ import org.bytedeco.javacpp.Loader;
 import org.mavlink.messages.MSP_CMD;
 import org.mavlink.messages.lquac.msg_msp_command;
 
-import com.comino.gazebo.estimators.MAVGazeboDepthEstimator;
 import com.comino.mavcom.config.MSPConfig;
 import com.comino.mavcom.config.MSPParams;
 import com.comino.mavcom.control.IMAVMSPController;
@@ -61,6 +60,9 @@ import com.comino.mavcom.model.segment.Vision;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
+import com.comino.mavjros.MavJROSNode;
+import com.comino.mavjros.subscribers.rgb.MavJROSDepthSubscriber;
+import com.comino.mavjros.subscribers.rgb.MavJROSRGBSubscriber;
 import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.ftpserver.MAVFtpServerFactory;
@@ -364,13 +366,7 @@ public class StartUp  {
 				else if(depth!=null) 
 					depth.enableStream(true);
 			});
-	
-			//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
-			//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
-			//				streamer.stop();
-			//			}
-			//		});
-	
+
 	
 			try {
 				((RTSPMultiStreamCVMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
@@ -380,22 +376,16 @@ public class StartUp  {
 					e1.printStackTrace();
 			}
 			
-			if(depth == null && control.isSimulation()) {
-				try {
-				depth = new MAVGazeboDepthEstimator(control,config,commander.getAutopilot().getMapper().getShorTermMap(),WIDTH,HEIGHT, streamer); 
-				depth.start();
-				depth.enableStream(true);
-				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-				System.out.println("Gazebo depth device found");
-				streamer.enableStream("DEPTH");
-				} catch (Exception e) {
-					depth=null;
-					System.out.println("No Gazebo depth device found");
-				}
+			MavJROSNode node = MavJROSNode.getInstance();
+			node.addSubscriber(new MavJROSRGBSubscriber(model,"/camera/color/image_raw", 640,480, streamer));
+			node.addSubscriber(new MavJROSDepthSubscriber(model,"/camera/depth_aligned_to_color_and_infra1/image_raw", 640,480, streamer));
+			try {
+			node.connect();
+			} catch (Exception e1) {
+					e1.printStackTrace();
 			}
-//	
-//			streamer.enableStream("DEPTH");
-	
+			
+
 		}
 
 	private void startOdometry() {
