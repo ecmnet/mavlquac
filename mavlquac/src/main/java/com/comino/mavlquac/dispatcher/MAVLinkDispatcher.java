@@ -246,6 +246,7 @@ public class MAVLinkDispatcher  {
 			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
 			status.uptime_ms = DataModel.getBootTime();
 			status.status = control.getCurrentModel().sys.getStatus();
+			status.sensors = control.getCurrentModel().sys.getSensors();
 			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
 			status.setArch(hw.getArchName());
 			status.unix_time_us = DataModel.getUnixTime_us();
