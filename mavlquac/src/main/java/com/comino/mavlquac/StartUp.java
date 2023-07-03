@@ -61,7 +61,8 @@ import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavjros.MavJROSNode;
-import com.comino.mavjros.subscribers.rgb.MavJROSDepthSubscriber;
+import com.comino.mavjros.subscribers.depth.MavJROSDepthSubscriber;
+import com.comino.mavjros.subscribers.localmap.MavJROSLocalMap2OctomapSubscriber;
 import com.comino.mavjros.subscribers.rgb.MavJROSRGBSubscriber;
 import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
@@ -109,6 +110,8 @@ public class StartUp  {
 
 	private MSPLogger logger;
 	private PX4Parameters params;
+	
+	private MavJROSNode node;
 
 
 	private final HardwareAbstraction hw;
@@ -268,6 +271,9 @@ public class StartUp  {
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
+				
+				if(node!=null)
+					node.shutdown();
 
 				control.shutdown();
 				//wq.printStatus();
@@ -357,7 +363,7 @@ public class StartUp  {
 			System.err.println("Start odometry (Simulation) ");
 			
 	
-			streamer = new RTSPMultiStreamCVMjpegHandler<Planar<GrayU8>>(control,WIDTH,HEIGHT,control.getCurrentModel());
+			streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(control,WIDTH,HEIGHT,control.getCurrentModel());
 			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
 	
 			streamer.registerNoVideoListener(() -> {
@@ -369,16 +375,24 @@ public class StartUp  {
 
 	
 			try {
-				((RTSPMultiStreamCVMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
+				((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
 			} catch (Exception e1) {
 				// TODO Auto-generated catch block
 				if(!control.isSimulation())
 					e1.printStackTrace();
 			}
 			
-			MavJROSNode node = MavJROSNode.getInstance();
+			node = MavJROSNode.getInstance(control.getCurrentModel());
+			node.addSubscriber(new MavJROSLocalMap2OctomapSubscriber(model,commander.getAutopilot().getMapper().getShorTermMap(),"/local2global"));
+//			node.addSubscriber(new MavJROSLocalMapTransferSubscriber(control,"/local2global"));
+			
+			node.addSubscriber(new MavJROSRGBSubscriber(model,"/stereo_publisher/color/image", 640,480, streamer));
+			node.addSubscriber(new MavJROSDepthSubscriber(model,"/stereo_publisher/stereo/depth", 640,480, streamer));
+			
 			node.addSubscriber(new MavJROSRGBSubscriber(model,"/camera/color/image_raw", 640,480, streamer));
-			node.addSubscriber(new MavJROSDepthSubscriber(model,"/camera/depth_aligned_to_color_and_infra1/image_raw", 640,480, streamer));
+        	node.addSubscriber(new MavJROSDepthSubscriber(model,"/camera/depth_aligned_to_color_and_infra1/image_raw", 640,480, streamer));
+//			node.addSubscriber(new MavJROSDepthMappingSubscriber(model,commander.getAutopilot().getMapper().getShorTermMap(),
+//					"/camera/depth_aligned_to_color_and_infra1/image_raw", 640,480, streamer));
 			try {
 			node.connect();
 			} catch (Exception e1) {

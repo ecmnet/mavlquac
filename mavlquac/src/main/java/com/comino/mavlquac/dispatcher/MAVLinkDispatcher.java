@@ -38,6 +38,7 @@ import org.mavlink.messages.MAV_FRAME;
 import org.mavlink.messages.lquac.msg_debug_vect;
 import org.mavlink.messages.lquac.msg_landing_target;
 import org.mavlink.messages.lquac.msg_msp_local_position_corrected;
+import org.mavlink.messages.lquac.msg_msp_micro_grid;
 import org.mavlink.messages.lquac.msg_msp_micro_slam;
 import org.mavlink.messages.lquac.msg_msp_obstacle;
 import org.mavlink.messages.lquac.msg_msp_status;
@@ -69,6 +70,7 @@ public class MAVLinkDispatcher  {
 	private final msg_msp_obstacle  				obs      = new msg_msp_obstacle(2,1);
 	private final msg_msp_trajectory                traj 	 = new msg_msp_trajectory(2,1);
 	private final msg_msp_local_position_corrected  lposc 	 = new msg_msp_local_position_corrected(2,1);
+	private final msg_msp_micro_grid                grid     = new msg_msp_micro_grid(2,1);
 
 	// Messages to PX4
 	private final msg_landing_target                landing  = new msg_landing_target(1,1);
@@ -102,6 +104,15 @@ public class MAVLinkDispatcher  {
 	private class Dispatch_20ms implements Runnable {
 		@Override
 		public void run() {
+            int i = 0;
+			while(model.grid.hasTransfers() && ++i < 5) {
+				if(model.grid.toArray(grid.data)) {
+					grid.tms        = DataModel.getSynchronizedPX4Time_us();
+					grid.count      = model.grid.count;
+					grid.resolution = 0.2f;
+					control.sendMAVLinkMessage(grid);
+				}
+			}	
 
 		}
 	}
