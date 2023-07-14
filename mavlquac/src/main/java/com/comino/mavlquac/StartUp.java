@@ -37,6 +37,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -61,8 +62,8 @@ import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavjros.MavJROSNode;
-import com.comino.mavjros.subscribers.depth.MavJROSDepthSubscriber;
-import com.comino.mavjros.subscribers.localmap.MavJROSLocalMap2OctomapSubscriber;
+import com.comino.mavjros.subscribers.depth.MavJROSDepthMappingSubscriber;
+import com.comino.mavjros.subscribers.odometry.MavJROSOdometrySubscriber;
 import com.comino.mavjros.subscribers.rgb.MavJROSRGBSubscriber;
 import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
@@ -72,7 +73,6 @@ import com.comino.mavodometry.estimators.depth.MAVOAKDDepthEstimator;
 import com.comino.mavodometry.estimators.position.MAVT265PositionEstimator;
 import com.comino.mavodometry.video.IVisualStreamHandler;
 import com.comino.mavodometry.video.impl.DefaultOverlayListener;
-import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamCVMjpegHandler;
 import com.comino.mavodometry.video.impl.mjpeg.RTSPMultiStreamMjpegHandler;
 import com.comino.mavutils.MSPStringUtils;
 import com.comino.mavutils.file.MSPFileUtils;
@@ -121,9 +121,6 @@ public class StartUp  {
 
 	public StartUp(String[] args) {
 
-		// NVJPEG CUDA TEST
-		//SampleJpeg.test();
-
 
 		try { Thread.sleep(1000); } catch(Exception e) { }
 
@@ -134,15 +131,8 @@ public class StartUp  {
 
 		try {
 			System.out.println("Platform: "+Loader.getPlatform()+" JavaCPP version: "+Loader.getVersion());
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		} catch (IOException e) {  }
 		
-
-//		BoofConcurrency.setMaxThreads(4);
-		//	BoofConcurrency.USE_CONCURRENT = false;
-
 		ExecutorService.create();
 
 		if(args.length != 0) {
@@ -199,17 +189,9 @@ public class StartUp  {
 		logger.enableDebugMessages(true);
 		
 		try {
-			ftpServer = MAVFtpServerFactory.createAndStart();
-			
-//			control.getStatusManager().addListener(StatusManager.TYPE_MSP_STATUS, Status.MSP_ARMED, (n) -> {
-//				if(n.isStatus(Status.MSP_ARMED))
-//					ftpServer.suspend();
-//				else
-//					ftpServer.resume();
-//			});
-			
+			ftpServer = MAVFtpServerFactory.createAndStart();			
 		} catch (Exception e) {
-			System.out.println(e.getMessage());
+			System.out.println("FTP server not started: "+e.getMessage());
 		}
 
 		params = PX4Parameters.getInstance(control);
@@ -228,40 +210,126 @@ public class StartUp  {
 		System.out.println(control.getStatusManager().getSize()+" status events registered");
 
 
-		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) { //&& Loader.getPlatform().indexOf("macosx-arm") < 0) {
-			if(control.isSimulation()) {
-				startSimOdometry();
+		if(config.getBoolProperty(MSPParams.VISION_ENABLED, "true")) { 
+			
+			streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(control,WIDTH,HEIGHT,control.getCurrentModel());
+			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
+	
+			streamer.registerNoVideoListener(() -> {
+				if(pose!=null)  
+					pose.enableStream(true);  
+				else if(depth!=null) 
+					depth.enableStream(true);
+			});
+			
+			try {
+				((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
+			} catch (Exception e1) { System.err.println( e1.getMessage());  }
+			
+			model.vision.setStatus(Vision.VIDEO_ENABLED, false);
+			
+			switch(mode) {
+			
+			case  MAVController.MODE_NORMAL:
+		    // No ROS, everything runs on JAVA
+				
+				try {
+					pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION_BODY, streamer);
+					pose.start();
+					pose.enableStream(true);
+					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+				} catch(UnsatisfiedLinkError | Exception e ) {
+					pose = null;
+					System.out.println("No T265 device found");
+				}
+				
+				if(depth==null) {
+					try {
+						depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMapper().getShorTermMap(),WIDTH,HEIGHT, streamer); 
+						depth.start();
+						depth.enableStream(true);
+						model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+
+					} catch (Exception e) {
+						depth=null;
+						System.out.println("No OAKD-Lite device found");
+					}
+				}
+				
+				break;
+				
+			case  MAVController.MODE_ORIN:
+		    // OAKD runs on ROS, T265 on Java
+				
+//				node = MavJROSNode.getInstance(control.getCurrentModel());
+//			//	node.addSubscriber(new MavJROSLocalMap2OctomapSubscriber(model,commander.getAutopilot().getMapper().getShorTermMap(),"/local2global"));
+//				node.addSubscriber(new MavJROSLocalMapTransferSubscriber(control,"/local2global"));
+//				node.addSubscriber(new MavJROSRGBSubscriber(model,"/stereo_publisher/color/image", WIDTH,HEIGHT, streamer));
+//				node.addSubscriber(new MavJROSDepthSubscriber(model,"/stereo_publisher/stereo/depth", WIDTH,HEIGHT, streamer));
+//				try {
+//					node.connect();
+//					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+//				} catch (Exception e) {
+//					System.out.println("ROS Node not available");
+//				}
+				
+				if(depth==null) {
+					try {
+						depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMapper().getShorTermMap(),WIDTH,HEIGHT, streamer); 
+						depth.start();
+						depth.enableStream(true);
+						model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+
+					} catch (Exception e) {
+						depth=null;
+						System.out.println("No OAKD-Lite device found");
+					}
+				}
+				
+				try {
+					pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION_BODY, streamer);
+					pose.start();
+					pose.enableStream(true);
+					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+				} catch(UnsatisfiedLinkError | Exception e ) {
+					pose = null;
+					System.out.println("No T265 device found");
+				}
+				
+				break;
+				
+		    default:
+		    // ROS only
+		    	
+		    	node = MavJROSNode.getInstance(control.getCurrentModel());
+		    //	node.addSubscriber(new MavJROSLocalMap2OctomapSubscriber(model,commander.getAutopilot().getMapper().getShorTermMap(),"/local2global"));
+		    	node.addSubscriber(new MavJROSOdometrySubscriber(control,"/gt_iris_base_link_imu"));
+		    	node.addSubscriber(new MavJROSRGBSubscriber(model,"/camera/color/image_raw", WIDTH,HEIGHT, streamer));
+	        	node.addSubscriber(new MavJROSDepthMappingSubscriber(model,commander.getAutopilot().getMapper().getShorTermMap(),
+	        			"/camera/depth_aligned_to_color_and_infra1/image_raw", WIDTH,HEIGHT, streamer));
+	        	try {
+					node.connect();
+					model.vision.setStatus(Vision.VIDEO_ENABLED, true);
+				} catch (URISyntaxException e) { }
+		    	
+		    	break;
 			}
-			else
-			    startOdometry();
-		} else {
-			System.err.println("MSP Odometry not started.");
+			streamer.enableStream("RGB+DOWN");
 		}
-
-		// Setup WorkQueues and start them
-
 
 		wq.addCyclicTask("LP", 200,  console);
 		wq.addCyclicTask("LP", 500,  hw);
 		wq.addSingleTask("LP", 100,  new initPX4());
-
 		wq.start();
-
-
-		//control.connect();
+		
 		control.start();
 
-		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
-
-
+		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") in mode "+mode+" started");
 	}
 
 	public static void main(String[] args)  {
 		System.setProperty("sun.java2d.opengl", "false");
 		System.setProperty("sun.java2d.xrender", "false");
-		//		System.setProperty("org.bytedeco.javacpp.logger.debug", "true");
-		//		System.setProperty("org.bytedeco.javacpp.nopointergc", "true");
-
 		
 		new StartUp(args);
 
@@ -333,11 +401,9 @@ public class StartUp  {
 				}
 			}
 		});
-
 	}
 
 	private void registerActions() {
-
 
 		// Switch to down view when precision landing
 		control.getStatusManager().addListener(StatusManager.TYPE_PX4_NAVSTATE, Status.NAVIGATION_STATE_AUTO_PRECLAND, (n) -> {
@@ -354,202 +420,8 @@ public class StartUp  {
 					streamer.enableStream("RGB+DOWN");	
 			}
 		});
-
 	}
-
-		private void startSimOdometry() {
 	
-			model.vision.clear();
-			System.err.println("Start odometry (Simulation) ");
-			
-	
-			streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(control,WIDTH,HEIGHT,control.getCurrentModel());
-			streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-	
-			streamer.registerNoVideoListener(() -> {
-				if(pose!=null)  
-					pose.enableStream(true);  
-				else if(depth!=null) 
-					depth.enableStream(true);
-			});
-
-	
-			try {
-				((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
-			} catch (Exception e1) {
-				// TODO Auto-generated catch block
-				if(!control.isSimulation())
-					e1.printStackTrace();
-			}
-			
-			node = MavJROSNode.getInstance(control.getCurrentModel());
-			node.addSubscriber(new MavJROSLocalMap2OctomapSubscriber(model,commander.getAutopilot().getMapper().getShorTermMap(),"/local2global"));
-//			node.addSubscriber(new MavJROSLocalMapTransferSubscriber(control,"/local2global"));
-			
-			node.addSubscriber(new MavJROSRGBSubscriber(model,"/stereo_publisher/color/image", 640,480, streamer));
-			node.addSubscriber(new MavJROSDepthSubscriber(model,"/stereo_publisher/stereo/depth", 640,480, streamer));
-			
-			node.addSubscriber(new MavJROSRGBSubscriber(model,"/camera/color/image_raw", 640,480, streamer));
-        	node.addSubscriber(new MavJROSDepthSubscriber(model,"/camera/depth_aligned_to_color_and_infra1/image_raw", 640,480, streamer));
-//			node.addSubscriber(new MavJROSDepthMappingSubscriber(model,commander.getAutopilot().getMapper().getShorTermMap(),
-//					"/camera/depth_aligned_to_color_and_infra1/image_raw", 640,480, streamer));
-			try {
-			node.connect();
-			} catch (Exception e1) {
-					e1.printStackTrace();
-			}
-			
-
-		}
-
-	private void startOdometry() {
-
-		model.vision.clear();
-
-		System.err.println("Start odometry");
-
-		streamer = new RTSPMultiStreamMjpegHandler<Planar<GrayU8>>(control,WIDTH,HEIGHT,control.getCurrentModel());
-		streamer.registerOverlayListener(new DefaultOverlayListener(WIDTH,HEIGHT,model));
-
-		streamer.registerNoVideoListener(() -> {
-			if(pose!=null)  
-				pose.enableStream(true);  
-			else if(depth!=null) 
-				depth.enableStream(true);
-		});
-
-		//		control.getStatusManager().addListener(Status.MSP_GCL_CONNECTED,(n) -> {
-		//			if(!n.isStatus(Status.MSP_GCL_CONNECTED)) {
-		//				streamer.stop();
-		//			}
-		//		});
-
-
-		try {
-			((RTSPMultiStreamMjpegHandler<Planar<GrayU8>>)streamer).start(1051);
-		} catch (Exception e1) {
-			// TODO Auto-generated catch block
-			if(!control.isSimulation())
-				e1.printStackTrace();
-		}
-
-		model.vision.setStatus(Vision.VIDEO_ENABLED, false);
-
-		try {
-
-			pose = new MAVT265PositionEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION_BODY, streamer);
-			pose.start();
-			pose.enableStream(true);
-			model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-
-
-
-		} catch(UnsatisfiedLinkError | Exception e ) {
-			pose = null;
-			System.out.println("No T265 device found");
-		}
-		
-		
-
-
-		//		if(pose == null && control.isSimulation()) {
-		//			try {
-		//				pose = new MAVGazeboVisPositionEstimator(control);
-		//				pose.start();
-		//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-		//			} catch(UnsatisfiedLinkError | Exception e ) {
-		//				System.out.println("Gazebo vision plugin could not be started");
-		//			}
-		//		}
-
-
-		//*** OAK-D as depth
-		if(depth==null) {
-			try {
-				//			depth = new MAVOAKDDepthSegmentEstimator(control,config, commander.getAutopilot().getMap(),WIDTH,HEIGHT, streamer);
-				depth = new MAVOAKDDepthEstimator(control,config, commander.getAutopilot().getMapper().getShorTermMap(),WIDTH,HEIGHT, streamer); 
-				depth.start();
-				depth.enableStream(true);
-				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-
-			} catch (Exception e) {
-				//	if(!control.isSimulation())
-				//		e.printStackTrace();
-				depth=null;
-				System.out.println("No OAKD-Lite device found");
-			}
-
-		}
-		
-
-
-		//*** OAK-D as simple Camera
-		//		if(depth==null) {
-		//			try {
-		//				depth = new MAVOAKDCamEstimator(control,config, WIDTH,HEIGHT, streamer);
-		//				depth.start();
-		//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-		//
-		//			} catch (Exception e) {
-		//				System.out.println("No OAKD-Lite device found");
-		//			}
-		//
-		//		}
-
-		//*** D4xx as depth
-
-		//		if(depth==null) {
-		//			try {
-		//				depth = new MAVD4xxDepthEstimator(control, commander.getAutopilot(), commander.getAutopilot().getMap(),config, WIDTH,HEIGHT, streamer);
-		//				depth.start();
-		//				model.vision.setStatus(Vision.VIDEO_ENABLED, true);
-		//
-		//			} catch(UnsatisfiedLinkError | Exception e ) {
-		//				System.out.println("No D455 device found");
-		//			}
-		//		}
-
-
-		//*** WebCam as depth
-
-		//		if(!control.isSimulation() && depth == null) {
-		//			try {
-		//				depth = new MAVFPVCameraNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
-		//				depth.start();
-		//
-		//			} catch(UnsatisfiedLinkError | Exception e ) {
-		//				System.out.println("! No FPV camera available");
-		//			}
-		//		}
-
-		//		if(control.isSimulation() && depth == null) {
-		//			try {
-		//			depth = new MAVGazeboFpvNullEstimator(control, config, WIDTH,HEIGHT, MAVT265PositionEstimator.LPOS_ODO_MODE_POSITION, streamer);
-		//			depth.start();
-		//			depth.enableStream(true);
-		//			} catch(UnsatisfiedLinkError | Exception e ) {
-		//				System.out.println("! No FPV available");
-		//			}
-		//		}
-
-		streamer.enableStream("RGB+DOWN");
-
-		//				if(depth!=null && pose!=null) {
-		//					streamer.enableStream("RGB+DOWN");
-		//				} else
-		//		
-		//				if(pose!=null && depth == null) {
-		//					streamer.enableStream("DOWN");
-		//				} 
-		//				if(depth!=null && pose == null) {
-		//					streamer.enableStream("RGB+DEPTH");
-		//				}
-
-
-
-
-
-	}
 
 	private class initPX4 implements Runnable {
 
@@ -566,9 +438,7 @@ public class StartUp  {
 				control.sendShellCommand("date -s \""+s+"\"");
 				control.sendShellCommand("lightware_laser_i2c start -X");	
 				params.requestRefresh(false);
-
 			}	
-
 		}	
 	}
 
@@ -589,8 +459,6 @@ public class StartUp  {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
 	}
-
 }
 

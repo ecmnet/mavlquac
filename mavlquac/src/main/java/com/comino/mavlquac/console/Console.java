@@ -39,16 +39,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-import org.mavlink.messages.MAV_SEVERITY;
-
 import com.comino.mavcom.control.IMAVController;
-import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.model.DataModel;
-import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavutils.workqueue.WorkQueue;
 
