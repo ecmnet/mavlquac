@@ -63,7 +63,6 @@ import com.comino.mavcom.status.StatusManager;
 import com.comino.mavcontrol.commander.MSPCommander;
 import com.comino.mavjros.MavJROSNode;
 import com.comino.mavjros.subscribers.depth.MavJROSDepthMappingSubscriber;
-import com.comino.mavjros.subscribers.odometry.MavJROSOdometrySubscriber;
 import com.comino.mavjros.subscribers.rgb.MavJROSRGBSubscriber;
 import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
@@ -303,8 +302,10 @@ public class StartUp  {
 		    	
 		    	node = MavJROSNode.getInstance(control.getCurrentModel());
 		    //	node.addSubscriber(new MavJROSLocalMap2OctomapSubscriber(model,commander.getAutopilot().getMapper().getShorTermMap(),"/local2global"));
-		    	node.addSubscriber(new MavJROSOdometrySubscriber(control,"/gt_iris_base_link_imu"));
+		    //	node.addSubscriber(new MavJROSOdometrySubscriber(control,"/gt_iris_base_link_imu"));
 		    	node.addSubscriber(new MavJROSRGBSubscriber(model,"/camera/color/image_raw", WIDTH,HEIGHT, streamer));
+		    //	node.addSubscriber(new MavJROSDepthSubscriber(model,"/camera/depth_aligned_to_color_and_infra1/image_raw", WIDTH,HEIGHT, streamer));
+		    	       
 	        	node.addSubscriber(new MavJROSDepthMappingSubscriber(model,commander.getAutopilot().getMapper().getShorTermMap(),
 	        			"/camera/depth_aligned_to_color_and_infra1/image_raw", WIDTH,HEIGHT, streamer));
 	        	try {

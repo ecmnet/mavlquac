@@ -105,7 +105,7 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
             int i = 0;
-			while(model.grid.hasTransfers() && ++i < 5) {
+			while(model.grid.hasTransfers() && ++i < 10) {
 				if(model.grid.toArray(grid.data)) {
 					grid.tms        = DataModel.getSynchronizedPX4Time_us();
 					grid.count      = model.grid.count;
@@ -195,24 +195,12 @@ public class MAVLinkDispatcher  {
 			// Publish SLAM data
 			if(publish_microslam && ( model.slam.fps > 0 || control.isSimulation())) {
 
-
-				if(Float.isFinite(model.obs.x)) {
-					model.slam.dm = (float)Math.sqrt(
-							(model.state.l_x - model.obs.x) * (model.state.l_x - model.obs.x) +
-							(model.state.l_y - model.obs.y) * (model.state.l_y - model.obs.y) +
-							(model.state.l_z - model.obs.z) * (model.state.l_z - model.obs.z)
-							);
-				} else
-					model.slam.dm = Float.NaN;
-
-
 				slam.ix = model.slam.ix;
 				slam.iy = model.slam.iy;
 				slam.iz = model.slam.iz;
 				slam.md = model.slam.di;
 				slam.mw = model.slam.dw;
-
-
+				
 				slam.quality = model.slam.quality;
 				slam.wpcount = model.slam.wpcount;
 				slam.flags = model.slam.flags;
