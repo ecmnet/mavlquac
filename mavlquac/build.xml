@@ -88,6 +88,11 @@
 		    <copy todir="${deploy_jetson.dir}/libs" overwrite="false" granularity="9223372036854">
 				    <fileset dir="${target.dir}/libs"/>
 		    </copy>
+		    <copy todir="${deploy_jetson.dir}/libs" overwrite="false">
+			   <fileset dir="${target.dir}/libs">
+			     	<include name="mav*.jar"/>
+			   	</fileset>
+		    </copy>
 		    <copy file="${target.dir}/mavlquac-0.0.1.jar" todir="${deploy_jetson.dir}"/>
 		    <copy file="${props.dir}/msp.properties" todir="${deploy_jetson.dir}"/>
 	</target>
@@ -96,6 +101,11 @@
 		 <copy todir="${deploy_ros.dir}/libs" overwrite="false" granularity="9223372036854">
 		    <fileset dir="${target.dir}/libs"/>
 		 </copy>
+		<copy todir="${deploy_ros.dir}/libs" overwrite="false">
+			  <fileset dir="${target.dir}/libs">
+				 <include name="mav*.jar"/>
+			  </fileset>
+	     </copy>
 		 <copy file="${target.dir}/mavlquac-0.0.1.jar" todir="${deploy_ros.dir}"/>
 	</target>
 
