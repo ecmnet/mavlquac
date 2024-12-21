@@ -1,0 +1,75 @@
+<project name="SLAM" basedir=".">
+
+	<property name="workspace.dir" value="/Users/ecmnet/PixHawk/java/" />
+	<property name="deploy_mavgcl.dir" value="/Users/ecmnet/PixHawk/java/MAVGCL/MAVGCL/lib" />
+
+	<property name="lib.dir" value="lib" />
+	<property name="target.dir" value="target" />
+	<property name="props.dir" value="properties" />
+
+	<property name="deploy_up.dir" value="/Volumes/lquac" />
+	<property name="deploy_jetson.dir" value="/Volumes/ecm/lquac" />
+
+
+	<target name="com" >
+		<exec dir="${workspace.dir}/MAVCom/mavcom" executable="sh">
+			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-21.0.1.jdk/Contents/home"/>
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
+		</exec>
+	</target>
+	
+	<target name="mavros2bridge" >
+			<exec dir="${workspace.dir}/MAVROS2Bridge/mavros2bridge" executable="sh">
+				<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-21.0.1.jdk/Contents/home"/>
+				<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
+			</exec>
+		</target>
+
+	<target name="utils" >
+		<exec dir="${workspace.dir}/MAVUtils/mavutils" executable="sh">
+			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-21.0.1.jdk/Contents/home"/>
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn clean install -amd'" />
+		</exec>
+	</target>
+
+	<target name="lquac" depends="com, mavros2bridge" >
+		<exec dir="${workspace.dir}/MAVLquac_ros2/mavlquac_ros2" executable="sh">
+			<env key="JAVA_HOME" path="/Library/Java/JavaVirtualMachines/jdk-21.0.1.jdk/Contents/home"/>
+			<arg line="-c '/usr/local/Cellar/maven/3.9.2/bin/mvn -Djavacpp.platform=linux-arm64 clean install -amd'" />
+		</exec>
+	</target>
+	
+<!--
+	<target name="jetson" depends="lquac">
+			<tstamp>
+				<format property="current.time" pattern="dd.MM.yyyy" />
+			</tstamp>
+			<buildnumber />
+			<echo>Current build number:${build.number}</echo>
+			<propertyfile file="${props.dir}/msp.properties">
+				<entry key="build" value="${build.number}" />
+				<entry key="build_date" value="${current.time}" />
+			</propertyfile>
+		    <copy todir="${deploy_jetson.dir}/libs" overwrite="false" granularity="9223372036854">
+				    <fileset dir="${target.dir}/libs"/>
+		    </copy>
+		    <copy todir="${deploy_jetson.dir}/libs" overwrite="false">
+			   <fileset dir="${target.dir}/libs">
+			     	<include name="mav*.jar"/>
+			   	</fileset>
+		    </copy>
+		    <copy file="${target.dir}/mavlquac-0.0.1.jar" todir="${deploy_jetson.dir}"/>
+		    <copy file="${props.dir}/msp.properties" todir="${deploy_jetson.dir}"/>
+	</target>
+-->
+	
+
+	<target name="build"  depends="lquac">
+			<copy todir="${deploy_mavgcl.dir}">
+				<fileset dir="${target.dir}/deploy">
+					<include name="mavcom*.jar" />
+				</fileset>
+			</copy>
+	</target>
+	
+</project>

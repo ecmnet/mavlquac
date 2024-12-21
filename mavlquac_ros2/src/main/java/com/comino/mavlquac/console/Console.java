@@ -83,6 +83,19 @@ public class Console implements Runnable {
 			System.exit(-1);
 			return;
 		}
+		
+		// Console help
+		if(s.contains("?") || s.contains("help")) {
+			System.out.println("wq\t\tWorkqueue status");
+			System.out.println("st\t\tMSP status");
+			System.out.println("se\t\tSensor and service status");
+			System.out.println("nav\t\tNavigation status");
+			System.out.println("pa\t\tShow parameter values");
+			System.out.println("vi\t\tOdometry status");
+			System.out.println("lp\t\tReload parameters");
+			System.out.println("ts\t\tDisplay time sync ");
+			return;	
+		}
 
 		// Workqueue status
 		if(s.contains("wq")) {
@@ -117,6 +130,12 @@ public class Console implements Runnable {
 		// Vision flags
 		if(s.contains("vi")) {
 			System.out.println(control.getCurrentModel().vision.toString());
+			return;
+		}
+		
+		if(s.contains("lp")) {
+			System.out.println("Re-loading PX4 parameters..");
+			PX4Parameters.getInstance().requestRefresh(true);
 			return;
 		}
 
@@ -156,20 +175,20 @@ public class Console implements Runnable {
 	//		}
 	//	}
 
-	private static class StreamGobbler implements Runnable {
-		private InputStream inputStream;
-		private Consumer<String> consumer;
-
-		public StreamGobbler(InputStream inputStream, Consumer<String> consumer) {
-			this.inputStream = inputStream;
-			this.consumer = consumer;
-		}
-
-		@Override
-		public void run() {
-			new BufferedReader(new InputStreamReader(inputStream)).lines()
-			.forEach(consumer);
-		}
-	}
+//	private static class StreamGobbler implements Runnable {
+//		private InputStream inputStream;
+//		private Consumer<String> consumer;
+//
+//		public StreamGobbler(InputStream inputStream, Consumer<String> consumer) {
+//			this.inputStream = inputStream;
+//			this.consumer = consumer;
+//		}
+//
+//		@Override
+//		public void run() {
+//			new BufferedReader(new InputStreamReader(inputStream)).lines()
+//			.forEach(consumer);
+//		}
+//	}
 
 }
