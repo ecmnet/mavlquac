@@ -45,6 +45,8 @@ import com.comino.mavutils.file.MSPFileUtils;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
 
+import us.ihmc.log.LogTools;
+
 public class StartUpROS2  {
 
 	private final WorkQueue wq = WorkQueue.getInstance();
@@ -65,23 +67,21 @@ public class StartUpROS2  {
 		ExecutorService.create();
 		
 		config  = MSPConfig.getInstance(MSPFileUtils.getJarContainingFolder(this.getClass()),"msp.properties");
-		System.out.println("MSPLquac-ROS2 (LQUAC build) version "+config.getVersion());
+		LogTools.info("MSPLquac-ROS2 (LQUAC build) version "+config.getVersion());
 
 		comm = new MAVProxyController(MAVController.MODE_ORIN,config);
 		logger = MSPLogger.getInstance(comm);
 		logger.enableDebugMessages(true);
 
 		PX4Parameters.getInstance(comm);
-		System.out.println(comm.getStatusManager().getSize()+" status events registered");
+		LogTools.info(comm.getStatusManager().getSize()+" status events registered");
 	
-		
-		ros2 = new MSPROS2Node(comm);
-		ros2.setup();
+		ros2 = MSPROS2Node.getInstance(comm);
 
 		wq.start();
 		comm.start();
 
-		logger.writeLocalMsg("MSP (Version: "+config.getVersion()+") started");
+		LogTools.info("MSP (Version: "+config.getVersion()+") started");
 		
 		dispatcher = new MAVLinkDispatcher(comm, config, null);
 		dispatcher.start();
