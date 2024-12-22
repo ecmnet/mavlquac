@@ -46,16 +46,29 @@ import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavutils.workqueue.WorkQueue;
 
+import us.ihmc.log.LogTools;
+
 public class Console implements Runnable {
 
-
+    public static Console instance;
 
 	private final IMAVController control;
 	private final BufferedReader br;
 
 	private Map<String,IConsolePrint> cmds = new HashMap<String,IConsolePrint>();
+	
+	public static Console getInstance(IMAVController control) {
+		if(instance == null)
+			instance = new Console(control);
+		return instance;
+	}
+	
+	public static Console getInstance() {
+		return instance;
+	}
 
-	public Console(IMAVController control) {
+	private Console(IMAVController control) {
+		LogTools.info("LQUAC Console started");
 		this.control = control;	
 		this.br = new BufferedReader(new InputStreamReader(System.in));
 	}

@@ -38,7 +38,9 @@ import com.comino.mavcom.control.IMAVMSPController;
 import com.comino.mavcom.control.impl.MAVController;
 import com.comino.mavcom.control.impl.MAVProxyController;
 import com.comino.mavcom.log.MSPLogger;
+import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
+import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavros2bridge.msp.MSPROS2Node;
 import com.comino.mavutils.file.MSPFileUtils;
@@ -61,9 +63,9 @@ public class StartUpROS2  {
 
 
 	public StartUpROS2(String[] args) {
-
+		
+		printSeparator();
 		addShutdownHook();
-
 		ExecutorService.create();
 		
 		config  = MSPConfig.getInstance(MSPFileUtils.getJarContainingFolder(this.getClass()),"msp.properties");
@@ -80,11 +82,15 @@ public class StartUpROS2  {
 
 		wq.start();
 		comm.start();
-
-		LogTools.info("MSP (Version: "+config.getVersion()+") started");
+		
+		wq.addCyclicTask("LP", 200,  Console.getInstance(comm));
 		
 		dispatcher = new MAVLinkDispatcher(comm, config, null);
 		dispatcher.start();
+		
+		LogTools.info("MSP (Version: "+config.getVersion()+") started");
+		
+		comm.getCurrentModel().sys.setStatus(Status.MSP_READY_FOR_FLIGHT,true);
 		
 		
 	}
@@ -92,7 +98,6 @@ public class StartUpROS2  {
 	public static void main(String[] args)  {
 		System.setProperty("sun.java2d.opengl", "false");
 		System.setProperty("sun.java2d.xrender", "false");
-
 		new StartUpROS2(args);
 
 	}
@@ -101,13 +106,16 @@ public class StartUpROS2  {
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
-
 				comm.shutdown();
 				wq.stop();
+				ros2.close();
+				printSeparator();
 			}
-
 		});
-
+	}
+	
+	private void printSeparator() {
+		System.out.println("===================================================================================================");
 	}
 
 
