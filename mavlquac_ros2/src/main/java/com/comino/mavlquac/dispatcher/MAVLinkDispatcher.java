@@ -135,28 +135,27 @@ public class MAVLinkDispatcher  {
 		@Override
 		public void run() {
 
-//			model.sys.setStatus(Status.MSP_ACTIVE,false);
-//
-//			if(hw !=null) {
-//				model.sys.wifi_quality = hw.getWifiQuality()/100f;
-//				status.load = hw.getCPULoad();
-//				status.memory = hw.getMemoryUsage();
-//				status.wifi_quality = hw.getWifiQuality();
-//				status.cpu_temp = (byte)hw.getCPUTemperature();
-//				status.setArch(hw.getArchName());
-//			}
-//
-//			status.threads = Thread.activeCount();
-//			status.bat_type = (byte)model.sys.bat_type;
-//			status.com_error = control.getErrorCount();
-//			status.takeoff_ms = model.sys.t_takeoff_ms;
-//			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
-//			status.uptime_ms = DataModel.getBootTime();
-//			status.status = control.getCurrentModel().sys.getStatus();
-//			status.sensors = control.getCurrentModel().sys.getSensors();
-//			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
-//			status.unix_time_us = DataModel.getUnixTime_us();
-//			control.sendMAVLinkMessage(status);
+
+			if(hw !=null) {
+				model.sys.wifi_quality = hw.getWifiQuality()/100f;
+				status.load = hw.getCPULoad();
+				status.memory = hw.getMemoryUsage();
+				status.wifi_quality = hw.getWifiQuality();
+				status.cpu_temp = (byte)hw.getCPUTemperature();
+				status.setArch(hw.getArchName());
+			}
+
+			status.threads = Thread.activeCount();
+			status.bat_type = (byte)model.sys.bat_type;
+			status.com_error = control.getErrorCount();
+			status.takeoff_ms = model.sys.t_takeoff_ms;
+			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
+			status.uptime_ms = DataModel.getBootTime();
+			status.status = control.getCurrentModel().sys.getStatus();
+			status.sensors = control.getCurrentModel().sys.getSensors();
+			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
+			status.unix_time_us = DataModel.getUnixTime_us();
+			control.sendMAVLinkMessage(status);
 
 
 		}
