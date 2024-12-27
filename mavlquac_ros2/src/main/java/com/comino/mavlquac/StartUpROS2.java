@@ -40,34 +40,38 @@ import com.comino.mavcom.control.impl.MAVProxyController;
 import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
+import com.comino.mavcom.status.StatusManager;
 import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
-import com.comino.mavros2bridge.msp.MSPROS2Node;
+import com.comino.mavlquac.flighttask.offboard.OffboardManager;
+import com.comino.mavros2bridge.msp.MSPROS2MAVLinkNode;
+import com.comino.mavros2bridge.msp.MSPROS2XRCENode;
 import com.comino.mavutils.file.MSPFileUtils;
 import com.comino.mavutils.legacy.ExecutorService;
 import com.comino.mavutils.workqueue.WorkQueue;
 
+import georegression.struct.point.Vector4D_F32;
 import us.ihmc.log.LogTools;
 
 public class StartUpROS2  {
 
 	private final WorkQueue wq = WorkQueue.getInstance();
 
-	IMAVMSPController     comm       = null;
+	MAVProxyController     comm       = null;
 	MSPConfig	          config     = null;
 	MAVLinkDispatcher     dispatcher = null;
-	MSPROS2Node           ros2       = null;
-	
+	MSPROS2MAVLinkNode    ros2       = null;
+
 
 	private MSPLogger logger;
 
 
 	public StartUpROS2(String[] args) {
-		
+
 		printSeparator();
 		addShutdownHook();
 		ExecutorService.create();
-		
+
 		config  = MSPConfig.getInstance(MSPFileUtils.getJarContainingFolder(this.getClass()),"msp.properties");
 		LogTools.info("MSPLquac-ROS2 (LQUAC build) version "+config.getVersion());
 
@@ -77,22 +81,33 @@ public class StartUpROS2  {
 
 		PX4Parameters.getInstance(comm);
 		LogTools.info(comm.getStatusManager().getSize()+" status events registered");
-	
-		ros2 = MSPROS2Node.getInstance(comm);
+
+		ros2 = MSPROS2MAVLinkNode.getInstance(comm);
 
 		wq.start();
 		comm.start();
-		
+
 		wq.addCyclicTask("LP", 200,  Console.getInstance(comm));
-		
+
 		dispatcher = new MAVLinkDispatcher(comm, config, null);
 		dispatcher.start();
-		
+
 		LogTools.info("MSP (Version: "+config.getVersion()+") started");
 		
+		OffboardManager offboard = OffboardManager.getInstance(comm);
+
 		comm.getCurrentModel().sys.setStatus(Status.MSP_READY_FOR_FLIGHT,true);
+		comm.getCurrentModel().sys.setStatus(Status.MSP_ACTIVE, true);
 		
-		
+		// Test only
+		comm.getStatusManager().addListener(StatusManager.TYPE_PX4_NAVSTATE, Status.NAVIGATION_STATE_AUTO_TAKEOFF,(state) -> {
+			if(!state.isNavState(Status.NAVIGATION_STATE_AUTO_TAKEOFF) && !state.isStatus(Status.MSP_LANDED) ) {
+				LogTools.info("Take off completed");
+				offboard.moveTo(new Vector4D_F32(2.0f,2.0f,-5.0f,0.0f), 5.0f);
+			} 
+		});
+
+
 	}
 
 	public static void main(String[] args)  {
@@ -113,7 +128,7 @@ public class StartUpROS2  {
 			}
 		});
 	}
-	
+
 	private void printSeparator() {
 		System.out.println("===================================================================================================");
 	}

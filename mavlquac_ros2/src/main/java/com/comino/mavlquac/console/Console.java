@@ -41,9 +41,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import org.mavlink.messages.MSP_CMD;
+
 import com.comino.mavcom.control.IMAVController;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.param.PX4Parameters;
+import com.comino.mavlquac.commander.MSPCommander;
+import com.comino.mavros2bridge.msp.MSPROS2XRCENode;
 import com.comino.mavutils.workqueue.WorkQueue;
 
 import us.ihmc.log.LogTools;
@@ -81,12 +85,13 @@ public class Console implements Runnable {
 	public void run() {
 		try {
 			if(br.ready()) {
-				parseConsole(br.readLine().trim().toLowerCase());
+				String[] splitted = br.readLine().trim().toLowerCase().split("\\s+");
+				parseConsole(splitted[0],splitted);
 			}
 		} catch (IOException e) { }
 	}
 
-	private void parseConsole(String s) {
+	private void parseConsole(String s, String...sub) {
 
 		if(s.isEmpty()) {
 			return;
@@ -156,7 +161,7 @@ public class Console implements Runnable {
 		if(s.contains("ts")) {
 			System.out.println("Montonic time:   "+DataModel.getSynchronizedPX4Time_us()+"us");
 			System.out.println("Unix time:       "+DataModel.getUnixTime_us()+"us");
-			System.out.println("Timesync offset: "+(DataModel.t_offset_ns/1000L)+"us");
+			System.out.println("Timesync offset: "+(DataModel.t_offset_us)+"us");
 			return;
 		}
 
