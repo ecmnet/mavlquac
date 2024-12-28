@@ -41,6 +41,7 @@ import com.comino.mavcom.log.MSPLogger;
 import com.comino.mavcom.model.segment.Status;
 import com.comino.mavcom.param.PX4Parameters;
 import com.comino.mavcom.status.StatusManager;
+import com.comino.mavlquac.commander.MAVMSPCommander;
 import com.comino.mavlquac.console.Console;
 import com.comino.mavlquac.dispatcher.MAVLinkDispatcher;
 import com.comino.mavlquac.flighttask.offboard.OffboardManager;
@@ -57,10 +58,12 @@ public class StartUpROS2  {
 
 	private final WorkQueue wq = WorkQueue.getInstance();
 
-	MAVProxyController     comm       = null;
+	MAVProxyController     comm      = null;
 	MSPConfig	          config     = null;
 	MAVLinkDispatcher     dispatcher = null;
 	MSPROS2MAVLinkNode    ros2       = null;
+	MAVMSPCommander          commander  = null;
+	OffboardManager       offboard   = null;
 
 
 	private MSPLogger logger;
@@ -94,20 +97,12 @@ public class StartUpROS2  {
 
 		LogTools.info("MSP (Version: "+config.getVersion()+") started");
 		
-		OffboardManager offboard = OffboardManager.getInstance(comm);
+		offboard = OffboardManager.getInstance(comm);
+		commander = MAVMSPCommander.getInstance(comm);
 
 		comm.getCurrentModel().sys.setStatus(Status.MSP_READY_FOR_FLIGHT,true);
-		comm.getCurrentModel().sys.setStatus(Status.MSP_ACTIVE, true);
+		comm.getCurrentModel().sys.setStatus(Status.MSP_ACTIVE, false);
 		
-		// Test only
-		comm.getStatusManager().addListener(StatusManager.TYPE_PX4_NAVSTATE, Status.NAVIGATION_STATE_AUTO_TAKEOFF,(state) -> {
-			if(!state.isNavState(Status.NAVIGATION_STATE_AUTO_TAKEOFF) && !state.isStatus(Status.MSP_LANDED) ) {
-				LogTools.info("Take off completed");
-				offboard.moveTo(new Vector4D_F32(2.0f,2.0f,-5.0f,0.0f), 5.0f);
-			} 
-		});
-
-
 	}
 
 	public static void main(String[] args)  {

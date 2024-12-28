@@ -149,10 +149,10 @@ public class MAVLinkDispatcher  {
 			status.bat_type = (byte)model.sys.bat_type;
 			status.com_error = control.getErrorCount();
 			status.takeoff_ms = model.sys.t_takeoff_ms;
-			status.autopilot_mode =control.getCurrentModel().sys.autopilot;
+			status.autopilot_mode = model.sys.autopilot;
 			status.uptime_ms = DataModel.getBootTime();
-			status.status = control.getCurrentModel().sys.getStatus();
-			status.sensors = control.getCurrentModel().sys.getSensors();
+			status.status = model.sys.getStatus();
+			status.sensors = model.sys.getSensors();
 			status.setVersion(config.getVersion()+"/"+config.getVersionDate().replace(".", ""));
 			status.unix_time_us = DataModel.getUnixTime_us();
 			control.sendMAVLinkMessage(status);

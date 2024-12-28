@@ -46,7 +46,7 @@ import org.mavlink.messages.MSP_CMD;
 import com.comino.mavcom.control.IMAVController;
 import com.comino.mavcom.model.DataModel;
 import com.comino.mavcom.param.PX4Parameters;
-import com.comino.mavlquac.commander.MSPCommander;
+import com.comino.mavlquac.commander.MAVMSPCommander;
 import com.comino.mavros2bridge.msp.MSPROS2XRCENode;
 import com.comino.mavutils.workqueue.WorkQueue;
 

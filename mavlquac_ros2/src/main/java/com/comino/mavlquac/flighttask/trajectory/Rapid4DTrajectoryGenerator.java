@@ -1,5 +1,6 @@
 package com.comino.mavlquac.flighttask.trajectory;
 
+import com.comino.mavcom.utils.MSP3DUtils;
 import com.comino.mavlquac.flighttask.types.VehicleState4D_F32;
 
 import georegression.struct.GeoTuple4D_F32;
@@ -55,6 +56,7 @@ public class Rapid4DTrajectoryGenerator {
 	}
 	
 	public void setGoal(GeoTuple4D_F32<?> p) {
+		
 		for(int i=0;i<4;i++) {
 			_axis[i].setGoalPosition(p.getIdx(i));
 			_axis[i].setGoalVelocity(0);
@@ -79,6 +81,30 @@ public class Rapid4DTrajectoryGenerator {
 	
 	public float geTimeToFinish() {
 		return (float)_tf;
+	}
+	
+	public double getInitialPosition(int i) {
+		return _axis[i].getInitialPos();
+	}
+
+	public double getInitialVelocity(int i) {
+		return _axis[i].getInitialVel();
+	}
+
+	public double getInitialAcceleration(int i) {
+		return _axis[i].getInitialAcc();
+	}
+	
+	public double getAxisParamAlpha(int i) {
+		return _axis[i].getParamAlpha();
+	}
+
+	public double getAxisParamBeta(int i) {
+		return _axis[i].getParamBeta();
+	}
+
+	public double getAxisParamGamma(int i) {
+		return _axis[i].getParamGamma();
 	}
 	
 	public void reset() {
